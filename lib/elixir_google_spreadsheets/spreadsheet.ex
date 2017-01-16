@@ -44,9 +44,19 @@ defmodule GSS.Spreadsheet do
         GenServer.call(pid, :id)
     end
 
+    @spec properties(pid) :: map()
+    def properties(pid) do
+        GenServer.call(pid, :properties)
+    end
+
     @spec rows(pid) :: {:ok, Integer} | {:error, Exception.t}
     def rows(pid) do
         GenServer.call(pid, :rows)
+    end
+
+    @spec fetch(pid, String.t) :: {:ok, spreadsheet_data} | {:error, Exception.t}
+    def fetch(pid, range) do
+        GenServer.call(pid, {:fetch, range})
     end
 
     @spec read_row(pid, Integer, Keyword.t) :: {:ok, spreadsheet_data} | {:error, Exception.t}
@@ -79,6 +89,20 @@ defmodule GSS.Spreadsheet do
     end
 
     @doc """
+    Get the shreadsheet properties
+    """
+    def handle_call(:properties, _from, %{spreadsheet_id: spreadsheet_id} = state) do
+      query = spreadsheet_id
+
+      case spreadsheet_query(:get, query) do
+        {:json, properties} ->
+          {:reply, {:ok, properties}, state}
+        {:error, exception} ->
+          {:reply, {:error, exception}, state}
+        end
+    end
+
+    @doc """
     Get total number of rows from spreadsheets.
     """
     def handle_call(:rows, _from, %{spreadsheet_id: spreadsheet_id} = state) do
@@ -95,6 +119,23 @@ defmodule GSS.Spreadsheet do
     end
 
     @doc """
+    Fetch the given range of cells from the spreadsheet
+    """
+    def handle_call({:fetch, the_range}, _from, %{spreadsheet_id: spreadsheet_id} = state) do
+        query = "#{spreadsheet_id}/values/#{the_range}"
+
+        case spreadsheet_query(:get, query) do
+            {:json, %{"values" => values}} ->
+                {:reply, {:ok, values}, state}
+            {:json, _} ->
+                {:reply, {:ok, nil}, state}
+            {:error, exception} ->
+                {:reply, {:error, exception}, state}
+        end
+    end
+
+
+    @doc """
     Get column value list for specific row from a spreadsheet.
     """
     def handle_call(
@@ -105,7 +146,7 @@ defmodule GSS.Spreadsheet do
         major_dimension = Keyword.get(options, :major_dimension, "ROWS")
         value_render_option = Keyword.get(options, :value_render_option, "FORMATTED_VALUE")
         datetime_render_option = Keyword.get(options, :datetime_render_option, "FORMATTED_STRING")
-        
+
         column_from = Keyword.get(options, :column_from, 1)
         column_to = Keyword.get(options, :column_to, 25)
         range = range(row_index, row_index, column_from, column_to)
@@ -141,9 +182,9 @@ defmodule GSS.Spreadsheet do
         column_to = Keyword.get(options, :column_to, column_from + write_cells_count - 1)
         range = range(row_index, row_index, column_from, column_to)
         query = "#{spreadsheet_id}/values/#{range}?valueInputOption=#{value_input_option}"
-        
+
         case spreadsheet_query(:put, query, column_list, options ++ [range: range]) do
-            {:json, %{"updatedRows" => 1, "updatedColumns" => updated_columns}} 
+            {:json, %{"updatedRows" => 1, "updatedColumns" => updated_columns}}
             when updated_columns == write_cells_count ->
                 {:reply, :ok, state}
             {:error, exception} ->
@@ -191,7 +232,7 @@ defmodule GSS.Spreadsheet do
         column_to = Keyword.get(options, :column_to, 25)
         range = range(row_index, row_index, column_from, column_to)
         query = "#{spreadsheet_id}/values/#{range}:clear"
-        
+
         case spreadsheet_query(:post, query) do
             {:json, %{"clearedRange" => _}} ->
                 {:reply, :ok, state}
@@ -217,7 +258,7 @@ defmodule GSS.Spreadsheet do
     defp spreadsheet_query(type, url_suffix, data, options) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
         HTTPoison.start
-        
+
         response = case type do
             :post ->
                 body = spreadsheet_query_body(data, options)
@@ -255,14 +296,14 @@ defmodule GSS.Spreadsheet do
     @spec range(Integer, Integer, Integer, Integer) :: String.t
     def range(row_from, row_to, column_from, column_to)
     when row_from <= row_to and column_from <= column_to
-    and row_to < 1001 and column_to < 26 do
+    and row_to < 1001 do
         column_from_letter = col_index_to_letter(column_from)
         column_to_letter = col_index_to_letter(column_to)
         "#{column_from_letter}#{row_from}:#{column_to_letter}#{row_to}"
     end
     def range(_, _, _, _) do
         raise GSS.InvalidRange,
-            message: "Max rows 1000, max columns 25, `to` value should be greater then `from`"
+            message: "Max rows 1000, max columns 255, `to` value should be greater then `from`"
     end
 
     @spec pad(Integer) :: spreadsheet_data
@@ -273,11 +314,12 @@ defmodule GSS.Spreadsheet do
     @spec col_index_to_letter(Integer) :: String.t
     defp col_index_to_letter(index) do
         case index do
-            i when i > 0 and i < 26 ->
-                j = 64 + index
-                to_string(for char <- j..j, do: char)
+          i when i > 0 and i < 27 ->
+            to_string([64 + index])
+          i when i > 26 and i < 256 ->
+            to_string([64 + div(index, 26), 64 + rem(index, 26)])
             _ ->
-                raise GSS.TooManyColumnsQueried, message: "Max column index shouldn't exceed 25"
+                raise GSS.InvalidColumnIndex, message: "Invalid column index"
         end
     end
 end
