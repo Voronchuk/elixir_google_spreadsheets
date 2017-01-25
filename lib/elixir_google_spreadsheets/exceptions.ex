@@ -5,9 +5,9 @@ defmodule GSS.GoogleApiError do
     defexception [:message]
 end
 
-defmodule GSS.TooManyColumnsQueried do
+defmodule GSS.InvalidColumnIndex do
     @moduledoc """
-    Raised in case more then 25 columns is queried.
+    Raised in case more then 255 columns is queried.
     """
     defexception [:message]
 end

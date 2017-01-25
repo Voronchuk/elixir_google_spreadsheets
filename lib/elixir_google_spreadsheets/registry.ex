@@ -67,7 +67,7 @@ defmodule GSS.Registry do
         token: token,
         expires: expires
     }} = state) do
-        if (expires < :os.system_time(:second)) do
+        if (expires < :os.system_time(:seconds)) do
             new_state = Map.put(state, :auth, refresh_token)
             {:reply, new_state.auth.token, new_state}
         else
