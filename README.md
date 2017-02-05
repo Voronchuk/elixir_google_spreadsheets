@@ -40,9 +40,10 @@ Default values:
 * `value_render_option = "FORMATTED_VALUE"`
 * `datetime_render_option = "FORMATTED_STRING"`
 * `value_render_option = "USER_ENTERED"`
-* `insert_data_option` = "INSERT_ROWS"
+* `insert_data_option = "INSERT_ROWS"`
 
 # Restrictions
+* Max columns __25__, max rows __1000__;
 * We don't support multi row operations at the moment;
 * Batch queries `batchGet`, `batchClear`, `batchUpdate` are not implemented;
 * __This library is in it's early beta, use on your own risk. Pull requests / reports / feedback are welcome.__

@@ -3,8 +3,9 @@ defmodule GSS do
     Bootstrap Google Spreadsheet application.
     """
 
-    @spec start() :: {:ok, pid}
-    def start do
+    use Application
+
+    def start(_type, _args) do
         GSS.Supervisor.start_link()
     end
 end

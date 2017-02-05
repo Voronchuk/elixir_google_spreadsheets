@@ -1,4 +1,6 @@
 %{"certifi": {:hex, :certifi, "0.4.0", "a7966efb868b179023618d29a407548f70c52466bf1849b9e8ebd0e34b7ea11f", [:rebar3], []},
+  "earmark": {:hex, :earmark, "1.1.1", "433136b7f2e99cde88b745b3a0cfc3fbc81fe58b918a09b40fce7f00db4d8187", [:mix], []},
+  "ex_doc": {:hex, :ex_doc, "0.14.5", "c0433c8117e948404d93ca69411dd575ec6be39b47802e81ca8d91017a0cf83c", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
   "goth": {:hex, :goth, "0.2.1", "c202289aebfbe8c5d3d0c594f63f7a7631f7d75cd20c5ca66626a5e6dd68e060", [:mix], [{:httpoison, "~> 0.9.0", [hex: :httpoison, optional: false]}, {:json_web_token, "~> 0.2.5", [hex: :json_web_token, optional: false]}, {:poison, "~> 2.1", [hex: :poison, optional: false]}]},
   "hackney": {:hex, :hackney, "1.6.1", "ddd22d42db2b50e6a155439c8811b8f6df61a4395de10509714ad2751c6da817", [:rebar3], [{:certifi, "0.4.0", [hex: :certifi, optional: false]}, {:idna, "1.2.0", [hex: :idna, optional: false]}, {:metrics, "1.0.1", [hex: :metrics, optional: false]}, {:mimerl, "1.0.2", [hex: :mimerl, optional: false]}, {:ssl_verify_fun, "1.1.0", [hex: :ssl_verify_fun, optional: false]}]},
   "httpoison": {:hex, :httpoison, "0.9.2", "a211a8e87403a043c41218e64df250d321f236ac57f786c6a0ccf3e9e817c819", [:mix], [{:hackney, "~> 1.6.0", [hex: :hackney, optional: false]}]},
