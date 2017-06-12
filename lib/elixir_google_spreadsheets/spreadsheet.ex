@@ -11,7 +11,8 @@ defmodule GSS.Spreadsheet do
     @typedoc """
     State of currently active Google spreadsheet:
         %{
-            spreadsheet_id => "16Wgt0fuoYDgEAtGtYKF4jdjAhZez0q77UhkKdeKI6B4"
+            spreadsheet_id => "16Wgt0fuoYDgEAtGtYKF4jdjAhZez0q77UhkKdeKI6B4",
+            list_name => nil
         }
     """
     @type state :: map()
@@ -23,12 +24,12 @@ defmodule GSS.Spreadsheet do
 
     @spec start_link(String.t, Keyword.t) :: {:ok, pid}
     def start_link(spreadsheet_id, opts) do
-        GenServer.start_link(__MODULE__, spreadsheet_id, Keyword.take(opts, [:name]))
+        GenServer.start_link(__MODULE__, [spreadsheet_id, opts], Keyword.take(opts, [:name]))
     end
 
     @spec init(String.t) :: {:ok, state}
-    def init(spreadsheet_id) do
-        {:ok, %{spreadsheet_id: spreadsheet_id}}
+    def init([spreadsheet_id, opts]) do
+        {:ok, %{spreadsheet_id: spreadsheet_id, list_name: Keyword.get(opts, :list_name)}}
     end
 
 
@@ -102,7 +103,7 @@ defmodule GSS.Spreadsheet do
     Get total number of rows from spreadsheets.
     """
     def handle_call(:rows, _from, %{spreadsheet_id: spreadsheet_id} = state) do
-        query = "#{spreadsheet_id}/values/#{range(1, 1000, 1, 1)}"
+        query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{range(1, 1000, 1, 1)}"
 
         case spreadsheet_query(:get, query) do
             {:json, %{"values" => values}} ->
@@ -118,7 +119,7 @@ defmodule GSS.Spreadsheet do
     Fetch the given range of cells from the spreadsheet
     """
     def handle_call({:fetch, the_range}, _from, %{spreadsheet_id: spreadsheet_id} = state) do
-        query = "#{spreadsheet_id}/values/#{the_range}"
+        query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{the_range}"
 
         case spreadsheet_query(:get, query) do
             {:json, %{"values" => values}} ->
@@ -146,7 +147,7 @@ defmodule GSS.Spreadsheet do
         column_from = Keyword.get(options, :column_from, 1)
         column_to = Keyword.get(options, :column_to, 25)
         range = range(row_index, row_index, column_from, column_to)
-        query = "#{spreadsheet_id}/values/#{range}" <>
+        query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{range}" <>
             "?majorDimension=#{major_dimension}&valueRenderOption=#{value_render_option}" <>
             "&dateTimeRenderOption=#{datetime_render_option}"
 
@@ -176,7 +177,7 @@ defmodule GSS.Spreadsheet do
         write_cells_count = length(column_list)
         column_from = Keyword.get(options, :column_from, 1)
         column_to = Keyword.get(options, :column_to, column_from + write_cells_count - 1)
-        range = range(row_index, row_index, column_from, column_to)
+        range = range(row_index, row_index, column_from, column_to, state)
         query = "#{spreadsheet_id}/values/#{range}?valueInputOption=#{value_input_option}"
 
         case spreadsheet_query(:put, query, column_list, options ++ [range: range]) do
@@ -202,7 +203,7 @@ defmodule GSS.Spreadsheet do
         write_cells_count = length(column_list)
         column_from = Keyword.get(options, :column_from, 1)
         column_to = Keyword.get(options, :column_to, column_from + write_cells_count - 1)
-        range = range(row_index, row_index, column_from, column_to)
+        range = range(row_index, row_index, column_from, column_to, state)
         query = "#{spreadsheet_id}/values/#{range}:append" <>
             "?valueInputOption=#{value_input_option}&insertDataOption=#{insert_data_option}"
 
@@ -227,7 +228,7 @@ defmodule GSS.Spreadsheet do
         column_from = Keyword.get(options, :column_from, 1)
         column_to = Keyword.get(options, :column_to, 25)
         range = range(row_index, row_index, column_from, column_to)
-        query = "#{spreadsheet_id}/values/#{range}:clear"
+        query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{range}:clear"
 
         case spreadsheet_query(:post, query) do
             {:json, %{"clearedRange" => _}} ->
@@ -301,6 +302,10 @@ defmodule GSS.Spreadsheet do
         raise GSS.InvalidRange,
             message: "Max rows 1000, max columns 255, `to` value should be greater then `from`"
     end
+    @spec range(Integer, Integer, Integer, Integer, state) :: String.t
+    def range(row_from, row_to, column_from, column_to, state) do
+        maybe_attach_list(state) <> range(row_from, row_to, column_from, column_to)
+    end
 
     @spec pad(Integer) :: spreadsheet_data
     defp pad(amount) do
@@ -318,4 +323,8 @@ defmodule GSS.Spreadsheet do
                 raise GSS.InvalidColumnIndex, message: "Invalid column index"
         end
     end
+
+    @spec maybe_attach_list(state) :: String.t
+    defp maybe_attach_list(%{list_name: nil}), do: ""
+    defp maybe_attach_list(%{list_name: list_name}) when is_bitstring(list_name), do: "#{list_name}!"
 end

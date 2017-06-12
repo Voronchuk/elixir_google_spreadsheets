@@ -25,8 +25,6 @@ defmodule GSS.SpreadsheetTest do
 
 
     test "initialize new spreadsheet process", %{spreadsheet: pid} do
-        assert Supervisor.count_children(GSS.Spreadsheet.Supervisor) == 
-            %{active: 1, specs: 1, supervisors: 0, workers: 1}
         assert GSS.Registry.spreadsheet_pid(@test_spreadsheet_id) == pid
         assert GSS.Spreadsheet.id(pid) == @test_spreadsheet_id
     end

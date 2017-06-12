@@ -13,7 +13,7 @@ defmodule GSS.Spreadsheet.Supervisor do
     @spec spreadsheet(String.t, Keyword.t) :: {:ok, pid}
     def spreadsheet(spreadsheet_id, opts \\ []) do
         {:ok, pid} = Supervisor.start_child(__MODULE__, [spreadsheet_id, opts])
-        :ok = GSS.Registry.new_spreadsheet(spreadsheet_id, pid)
+        :ok = GSS.Registry.new_spreadsheet(spreadsheet_id, pid, opts)
         {:ok, pid}
     end
 
