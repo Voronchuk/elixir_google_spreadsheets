@@ -10,7 +10,7 @@ defmodule GSS.Mixfile do
             docs: [extras: ["README.md"]],
             build_embedded: Mix.env == :prod,
             start_permanent: Mix.env == :prod,
-            package: package,
+            package: package(),
             deps: deps()
         ]
     end
@@ -38,9 +38,8 @@ defmodule GSS.Mixfile do
 
     defp deps do
         [
-            {:goth, "~> 0.2.1"},
-            {:hackney, "1.6.1"},
-            {:httpoison, "~> 0.9.2"},
+            {:goth, "~> 0.3"},
+            {:httpoison, "~> 0.11"},
             {:earmark, ">= 0.0.0", only: :dev},
             {:ex_doc, ">= 0.0.0", only: :dev},
         ]
