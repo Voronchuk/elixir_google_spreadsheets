@@ -21,13 +21,9 @@ defmodule GSS.Spreadsheet do
     @api_url_spreadsheet "https://sheets.googleapis.com/v4/spreadsheets/"
 
 
-    @spec start_link(String.t) :: {:ok, pid}
-    def start_link(spreadsheet_id) do
-        GenServer.start_link(__MODULE__, spreadsheet_id)
-    end
-    @spec start_link(String.t, atom()) :: {:ok, pid}
-    def start_link(spreadsheet_id, name) do
-        GenServer.start_link(__MODULE__, spreadsheet_id, name: name)
+    @spec start_link(String.t, Keyword.t) :: {:ok, pid}
+    def start_link(spreadsheet_id, opts) do
+        GenServer.start_link(__MODULE__, spreadsheet_id, Keyword.take(opts, [:name]))
     end
 
     @spec init(String.t) :: {:ok, state}

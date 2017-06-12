@@ -10,13 +10,9 @@ defmodule GSS.Spreadsheet.Supervisor do
         Supervisor.start_link(__MODULE__, [], name: __MODULE__)
     end
 
-    @spec spreadsheet(String.t, atom() | nil) :: {:ok, pid}
-    def spreadsheet(spreadsheet_id, name \\ nil) do
-        {:ok, pid} = if is_nil(name) do
-            Supervisor.start_child(__MODULE__, [spreadsheet_id])
-        else
-            Supervisor.start_child(__MODULE__, [spreadsheet_id, name])
-        end
+    @spec spreadsheet(String.t, Keyword.t) :: {:ok, pid}
+    def spreadsheet(spreadsheet_id, opts \\ []) do
+        {:ok, pid} = Supervisor.start_child(__MODULE__, [spreadsheet_id, opts])
         :ok = GSS.Registry.new_spreadsheet(spreadsheet_id, pid)
         {:ok, pid}
     end

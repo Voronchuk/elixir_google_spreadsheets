@@ -10,7 +10,7 @@ defmodule GSS.Mixfile do
             docs: [extras: ["README.md"]],
             build_embedded: Mix.env == :prod,
             start_permanent: Mix.env == :prod,
-            package: package,
+            package: package(),
             deps: deps()
         ]
     end
