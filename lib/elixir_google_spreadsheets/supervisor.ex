@@ -17,6 +17,6 @@ defmodule GSS.Supervisor do
             supervisor(GSS.Spreadsheet.Supervisor, [])
         ]
 
-        supervise(children, strategy: :one_for_one)
+        supervise(children, strategy: :one_for_all)
     end
 end
