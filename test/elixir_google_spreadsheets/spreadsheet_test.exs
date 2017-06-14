@@ -57,4 +57,30 @@ defmodule GSS.SpreadsheetTest do
         {:ok, result} = GSS.Spreadsheet.read_row(pid, 2, column_to: 6)
         assert result == @test_row2
     end
+
+    test "read batched for 2 rows", %{spreadsheet: pid} do
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 2, column_to: 5)
+        assert result == [nil, nil]
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 2, column_to: 5, pad_empty: true)
+        assert result == [["", "", "", "", ""], ["", "", "", "", ""]]
+        :ok = GSS.Spreadsheet.write_row(pid, 1, @test_row1)
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 2, column_to: 5, pad_empty: true)
+        assert result == [@test_row1, ["", "", "", "", ""]]
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, ["A1:E1", "A2:E2"])
+        assert result == [@test_row1, nil]
+    end
+
+    test "clear batched for 2 rows", %{spreadsheet: pid} do
+        :ok = GSS.Spreadsheet.write_row(pid, 1, @test_row1)
+        :ok = GSS.Spreadsheet.write_row(pid, 2, @test_row1)
+        :ok = GSS.Spreadsheet.clear_rows(pid, 1, 2, column_to: 5)
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 2, column_to: 5)
+        assert result == [nil, nil]
+    end
+
+    test "write batched for 2 rows", %{spreadsheet: pid} do
+        {:ok, _} = GSS.Spreadsheet.write_rows(pid, ["A2:E2", "A3:F3"], [@test_row1, @test_row2])
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 2, 3, column_to: 6)
+        assert result == [@test_row1 ++ [""], @test_row2]
+    end
 end

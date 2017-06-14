@@ -18,3 +18,10 @@ defmodule GSS.InvalidRange do
     """
     defexception [:message]
 end
+
+defmodule GSS.InvalidInput do
+    @moduledoc """
+    Raised in case invalid input params are passed
+    """
+    defexception [:message]
+end

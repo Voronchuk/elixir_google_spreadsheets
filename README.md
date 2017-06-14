@@ -29,9 +29,14 @@ Sample operations:
 * `GSS.Spreadsheet.id(pid)`
 * `GSS.Spreadsheet.rows(pid)`
 * `GSS.Spreadsheet.read_row(pid, 1, column_to: 5)`
+* `GSS.Spreadsheet.read_rows(pid, 1, 10, column_to: 5, pad_empty: true)`
+* `GSS.Spreadsheet.read_rows(pid, ["A1:E1", "A2:E2"])`
 * `GSS.Spreadsheet.write_row(pid, 1, ["1", "2", "3", "4", "5"])`
+* `GSS.Spreadsheet.write_rows(pid, ["A2:E2", "A3:F3"], [["1", "2", "3", "4", "5"], ["1", "2", "3", "4", "5", "6"]])`
 * `GSS.Spreadsheet.append_row(pid, 1, ["1", "2", "3", "4", "5"])`
 * `GSS.Spreadsheet.clear_row(pid, 1)`
+* `GSS.Spreadsheet.clear_rows(pid, 1, 10)`
+* `GSS.Spreadsheet.clear_rows(pid, ["A1:E1", "A2:E2"])`
 
 Last function param of `GSS.Spreadsheet` function calls support the same `Keyword` options (in snake_case instead of camelCase), as defined in [Google API Docs](https://developers.google.com/sheets/reference/rest/v4/spreadsheets.values).
 
@@ -39,7 +44,7 @@ We also define `column_from` and `column_to` Keyword options which control range
 
 Default values:
 * `column_from = 1`
-* `column_to = 25`
+* `column_to = 26`
 * `major_dimension = "ROWS"`
 * `value_render_option = "FORMATTED_VALUE"`
 * `datetime_render_option = "FORMATTED_STRING"`
@@ -47,7 +52,5 @@ Default values:
 * `insert_data_option = "INSERT_ROWS"`
 
 # Restrictions
-* Max columns __25__, max rows __1000__;
-* We don't support multi row operations at the moment;
-* Batch queries `batchGet`, `batchClear`, `batchUpdate` are not implemented;
+* Max columns __26__, max rows __1000__;
 * __This library is in it's early beta, use on your own risk. Pull requests / reports / feedback are welcome.__

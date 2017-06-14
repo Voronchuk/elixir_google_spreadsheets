@@ -34,47 +34,130 @@ defmodule GSS.Spreadsheet do
 
 
     @doc """
-    Client API calls.
+    Get spreadsheet internal id.
     """
     @spec id(pid) :: String.t
     def id(pid) do
         GenServer.call(pid, :id)
     end
 
+    @doc """
+    Get spreadsheet properties.
+    """
     @spec properties(pid) :: map()
     def properties(pid) do
         GenServer.call(pid, :properties)
     end
 
-    @spec rows(pid) :: {:ok, Integer} | {:error, Exception.t}
+    @doc """
+    Get total amount of rows in a spreadsheet.
+    """
+    @spec rows(pid) :: {:ok, integer()} | {:error, Exception.t}
     def rows(pid) do
         GenServer.call(pid, :rows)
     end
 
+    @doc """
+    Granural read by a custom range from a spreadsheet.
+    """
     @spec fetch(pid, String.t) :: {:ok, spreadsheet_data} | {:error, Exception.t}
     def fetch(pid, range) do
         GenServer.call(pid, {:fetch, range})
     end
 
-    @spec read_row(pid, Integer, Keyword.t) :: {:ok, spreadsheet_data} | {:error, Exception.t}
+    @doc """
+    Read row in a spreadsheet by index.
+    """
+    @spec read_row(pid, integer(), Keyword.t) :: {:ok, spreadsheet_data} | {:error, Exception.t}
     def read_row(pid, row_index, options \\ []) do
         GenServer.call(pid, {:read_row, row_index, options})
     end
 
-    @spec write_row(pid, Integer, spreadsheet_data, Keyword.t) :: :ok
+    @doc """
+    Override row in a spreadsheet by index.
+    """
+    @spec write_row(pid, integer(), spreadsheet_data, Keyword.t) :: :ok
     def write_row(pid, row_index, column_list, options \\ []) when is_list(column_list) do
         GenServer.call(pid, {:write_row, row_index, column_list, options})
     end
 
-    @spec append_row(pid, Integer, spreadsheet_data, Keyword.t) :: :ok
+    @doc """
+    Append row in a spreadsheet after an index.
+    """
+    @spec append_row(pid, integer(), spreadsheet_data, Keyword.t) :: :ok
     def append_row(pid, row_index, column_list, options \\ []) when is_list(column_list) do
         GenServer.call(pid, {:append_row, row_index, column_list, options})
     end
 
-    @spec clear_row(pid, Integer, Keyword.t) :: :ok
+    @doc """
+    Clear row in a spreadsheet by index.
+    """
+    @spec clear_row(pid, integer(), Keyword.t) :: :ok
     def clear_row(pid, row_index, options \\ []) do
         GenServer.call(pid, {:clear_row, row_index, options})
     end
+
+    @doc """
+    Batched read, which returns more then one record.
+    Pass either an array of ranges, or start and end row indexes.
+
+    By default it returns `nils` for an empty rows, 
+    use `pad_empty: true` and `column_to: integer` options to fill records
+    with an empty string values.
+    """
+    @spec read_rows(pid, [String.t]) :: {:ok, [spreadsheet_data | nil]} | {:error, Exception.t}
+    def read_rows(pid, ranges), do: read_rows(pid, ranges, [])
+    @spec read_rows(pid, [String.t], Keyword.t) :: {:ok, [spreadsheet_data]} | {:error, Exception.t}
+    def read_rows(pid, ranges, options) when is_list(ranges) do
+        GenServer.call(pid, {:read_rows, ranges, options})
+    end
+    @spec read_rows(pid, integer(), integer()) :: {:ok, [spreadsheet_data]} | {:error, Exception.t}
+    def read_rows(pid, row_index_start, row_index_end)
+    when is_integer(row_index_start) and is_integer(row_index_end), do: read_rows(pid, row_index_start, row_index_end, [])
+    def read_rows(_, _, _), do: {:error, GSS.InvalidInput}
+    @spec read_rows(pid, integer(), integer(), Keyword.t) :: {:ok, [spreadsheet_data]} | {:error, Exception.t}
+    def read_rows(pid, row_index_start, row_index_end, options)
+    when is_integer(row_index_start) and is_integer(row_index_end) and row_index_start < row_index_end do
+        GenServer.call(pid, {:read_rows, row_index_start, row_index_end, options})
+    end
+    def read_rows(_, _, _, _), do: {:error, GSS.InvalidInput}
+
+    @doc """
+    Batched clear, which deletes more then one record.
+    Pass either an array of ranges, or start and end row indexes.
+    """
+    @spec clear_rows(pid, [String.t]) :: :ok | {:error, Exception.t}
+    def clear_rows(pid, ranges), do: clear_rows(pid, ranges, [])
+    @spec clear_rows(pid, [String.t], Keyword.t) :: :ok | {:error, Exception.t}
+    def clear_rows(pid, ranges, options) when is_list(ranges) do
+        GenServer.call(pid, {:clear_rows, ranges, options})
+    end
+    @spec clear_rows(pid, integer(), integer()) :: :ok | {:error, Exception.t}
+    def clear_rows(pid, row_index_start, row_index_end)
+    when is_integer(row_index_start) and is_integer(row_index_end), do: clear_rows(pid, row_index_start, row_index_end, [])
+    def clear_rows(_, _, _), do: {:error, GSS.InvalidInput}
+    @spec clear_rows(pid, integer(), integer(), Keyword.t) :: :ok | {:error, Exception.t}
+    def clear_rows(pid, row_index_start, row_index_end, options)
+    when is_integer(row_index_start) and is_integer(row_index_end) and row_index_start < row_index_end do
+        GenServer.call(pid, {:clear_rows, row_index_start, row_index_end, options})
+    end
+    def clear_rows(_, _, _, _), do: {:error, GSS.InvalidInput}
+
+    @doc """
+    Batch update to write multiple rows.
+
+    Range schema should define the same amount of rows as
+    amound of records in data and same amount of columns 
+    as entries in data record.
+    """
+    @spec write_rows(pid, [String.t], [spreadsheet_data]) :: :ok
+    def write_rows(pid, ranges, data), do: write_rows(pid, ranges, data, [])
+    @spec write_rows(pid, [String.t], [spreadsheet_data], Keyword.t) :: :ok
+    def write_rows(pid, ranges, data, options)
+    when is_list(data) and is_list(ranges) and length(data) == length(ranges) do
+        GenServer.call(pid, {:write_rows, ranges, data, options})
+    end
+    def write_rows(_, _, _, _), do: {:error, GSS.InvalidInput}
 
 
     @doc """
@@ -145,7 +228,7 @@ defmodule GSS.Spreadsheet do
         datetime_render_option = Keyword.get(options, :datetime_render_option, "FORMATTED_STRING")
 
         column_from = Keyword.get(options, :column_from, 1)
-        column_to = Keyword.get(options, :column_to, 25)
+        column_to = Keyword.get(options, :column_to, 26)
         range = range(row_index, row_index, column_from, column_to)
         query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{range}" <>
             "?majorDimension=#{major_dimension}&valueRenderOption=#{value_render_option}" <>
@@ -172,7 +255,7 @@ defmodule GSS.Spreadsheet do
         _from,
         %{spreadsheet_id: spreadsheet_id} = state
     ) do
-        value_input_option = Keyword.get(options, :value_render_option, "USER_ENTERED")
+        value_input_option = Keyword.get(options, :value_input_option, "USER_ENTERED")
 
         write_cells_count = length(column_list)
         column_from = Keyword.get(options, :column_from, 1)
@@ -197,7 +280,7 @@ defmodule GSS.Spreadsheet do
         _from,
         %{spreadsheet_id: spreadsheet_id} = state
     ) do
-        value_input_option = Keyword.get(options, :value_render_option, "USER_ENTERED")
+        value_input_option = Keyword.get(options, :value_input_option, "USER_ENTERED")
         insert_data_option = Keyword.get(options, :insert_data_option, "INSERT_ROWS")
 
         write_cells_count = length(column_list)
@@ -226,7 +309,7 @@ defmodule GSS.Spreadsheet do
         %{spreadsheet_id: spreadsheet_id} = state
     ) do
         column_from = Keyword.get(options, :column_from, 1)
-        column_to = Keyword.get(options, :column_to, 25)
+        column_to = Keyword.get(options, :column_to, 26)
         range = range(row_index, row_index, column_from, column_to)
         query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{range}:clear"
 
@@ -239,10 +322,111 @@ defmodule GSS.Spreadsheet do
     end
 
 
+    @doc """
+    Get column value list for specific row from a spreadsheet.
+    """
+    def handle_call(
+        {:read_rows, ranges, options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id} = state
+    ) do
+        major_dimension = Keyword.get(options, :major_dimension, "ROWS")
+        value_render_option = Keyword.get(options, :value_render_option, "FORMATTED_VALUE")
+        datetime_render_option = Keyword.get(options, :datetime_render_option, "FORMATTED_STRING")
+
+        str_ranges = ranges
+        |> Enum.map(&("ranges=#{maybe_attach_list(state)}#{&1}"))
+        |> Enum.join("&")
+        query = "#{spreadsheet_id}/values:batchGet" <>
+            "?majorDimension=#{major_dimension}&valueRenderOption=#{value_render_option}" <>
+            "&dateTimeRenderOption=#{datetime_render_option}&#{str_ranges}"
+
+        case spreadsheet_query(:get, query) do
+            {:json, %{"valueRanges" => valueRanges}} ->
+                {:reply, {:ok, parse_value_ranges(valueRanges, options)}, state}
+            {:json, _} ->
+                {:reply, {:ok, []}, state}
+            {:error, exception} ->
+                {:reply, {:error, exception}, state}
+        end
+    end
+    def handle_call({:read_rows, row_index_start, row_index_end, options}, from, state) do
+        column_from = Keyword.get(options, :column_from, 1)
+        column_to = Keyword.get(options, :column_to, 26)
+        ranges = Enum.map row_index_start..row_index_end, fn(row_index) ->
+            range(row_index, row_index, column_from, column_to)
+        end
+        handle_call({:read_rows, ranges, options}, from, state)
+    end
+
+
+    @doc """
+    Clear rows in spreadsheet by their index.
+    """
+    def handle_call(
+        {:clear_rows, ranges, _options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id} = state
+    ) do
+        str_ranges = ranges
+        |> Enum.map(&("ranges=#{maybe_attach_list(state)}#{&1}"))
+        |> Enum.join("&")
+        query = "#{spreadsheet_id}/values:batchClear?#{str_ranges}"
+
+        case spreadsheet_query(:post, query) do
+            {:json, %{"clearedRanges" => _}} ->
+                {:reply, :ok, state}
+            {:error, exception} ->
+                {:reply, {:error, exception}, state}
+        end
+    end
+    def handle_call({:clear_rows, row_index_start, row_index_end, options}, from, state) do
+        column_from = Keyword.get(options, :column_from, 1)
+        column_to = Keyword.get(options, :column_to, 26)
+        ranges = Enum.map row_index_start..row_index_end, fn(row_index) ->
+            range(row_index, row_index, column_from, column_to)
+        end
+        handle_call({:clear_rows, ranges, options}, from, state)
+    end
+
+
+    @doc """
+    Write values in batch based on a ranges schema.
+    """
+    def handle_call(
+        {:write_rows, ranges, data, options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id} = state
+    ) do
+        request_data = Enum.map Enum.zip(ranges, data), fn({range, record}) ->
+            %{
+                range: "#{maybe_attach_list(state)}#{range}",
+                values: [record],
+                majorDimension: Keyword.get(options, :major_dimension, "ROWS")
+            }
+        end
+
+        request_body = %{
+            data: request_data,
+            valueInputOption: Keyword.get(options, :value_input_option, "USER_ENTERED"),
+            #includeValuesInResponse: Keyword.get(options, :include_values_in_response, false),
+            #responseValueRenderOption: Keyword.get(options, :response_value_render_option, "FORMATTED_VALUE"),
+            #responseDateTimeRenderOption: Keyword.get(options, :response_date_time_render_option, "SERIAL_NUMBER")
+        }
+
+        query = "#{spreadsheet_id}/values:batchUpdate"
+        case spreadsheet_query_post_batch(query, request_body, options) do
+            {:json, %{"responses" => responses}} ->
+                {:reply, {:ok, responses}, state}
+            {:error, exception} ->
+                {:reply, {:error, exception}, state}
+        end
+    end
+
+
     @spec spreadsheet_query(:get | :post, String.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
-        HTTPoison.start
         response = case type do
             :get ->
                 HTTPoison.get! @api_url_spreadsheet <> url_suffix, headers
@@ -254,8 +438,6 @@ defmodule GSS.Spreadsheet do
     @spec spreadsheet_query(:post | :put, String.t, spreadsheet_data, Keyword.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix, data, options) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
-        HTTPoison.start
-
         response = case type do
             :post ->
                 body = spreadsheet_query_body(data, options)
@@ -266,6 +448,13 @@ defmodule GSS.Spreadsheet do
         end
         spreadsheet_query_response(response)
     end
+    @spec spreadsheet_query_post_batch(String.t, map(), Keyword.t) :: spreadsheet_response
+    defp spreadsheet_query_post_batch(url_suffix, request, _options) do
+        headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
+        body = Poison.encode!(request)
+        response = HTTPoison.post! @api_url_spreadsheet <> url_suffix, body, headers
+        spreadsheet_query_response(response)
+    end
 
     @spec spreadsheet_query_response(%HTTPoison.Response{}) :: spreadsheet_response
     defp spreadsheet_query_response(response) do
@@ -274,7 +463,7 @@ defmodule GSS.Spreadsheet do
                 json = Poison.decode!(body)
                 {:json, json}
             _ ->
-                Logger.error fn -> "Spreadsheet query: #{response}" end
+                Logger.error fn -> "Spreadsheet query: #{inspect(response)}" end
                 {:error, GSS.GoogleApiError}
         end
     end
@@ -290,7 +479,7 @@ defmodule GSS.Spreadsheet do
         }
     end
 
-    @spec range(Integer, Integer, Integer, Integer) :: String.t
+    @spec range(integer(), integer(), integer(), integer()) :: String.t
     def range(row_from, row_to, column_from, column_to)
     when row_from <= row_to and column_from <= column_to
     and row_to < 1001 do
@@ -302,17 +491,17 @@ defmodule GSS.Spreadsheet do
         raise GSS.InvalidRange,
             message: "Max rows 1000, max columns 255, `to` value should be greater then `from`"
     end
-    @spec range(Integer, Integer, Integer, Integer, state) :: String.t
+    @spec range(integer(), integer(), integer(), integer(), state) :: String.t
     def range(row_from, row_to, column_from, column_to, state) do
         maybe_attach_list(state) <> range(row_from, row_to, column_from, column_to)
     end
 
-    @spec pad(Integer) :: spreadsheet_data
+    @spec pad(integer()) :: spreadsheet_data
     defp pad(amount) do
         for _i <- 1..amount, do: ""
     end
 
-    @spec col_index_to_letter(Integer) :: String.t
+    @spec col_index_to_letter(integer()) :: String.t
     defp col_index_to_letter(index) do
         case index do
           i when i > 0 and i < 27 ->
@@ -327,4 +516,43 @@ defmodule GSS.Spreadsheet do
     @spec maybe_attach_list(state) :: String.t
     defp maybe_attach_list(%{list_name: nil}), do: ""
     defp maybe_attach_list(%{list_name: list_name}) when is_bitstring(list_name), do: "#{list_name}!"
+
+
+    @spec parse_value_ranges([map()], Keyword.t) :: [[String.t | nil]]
+    defp parse_value_ranges(value_ranges, options) do
+        column_to = Keyword.get(options, :column_to)
+        parse_value_ranges(value_ranges, options, column_to)
+    end
+    @spec parse_value_ranges([map()], Keyword.t, integer() | nil) :: [[String.t | nil]]
+    defp parse_value_ranges(value_ranges, options, nil) do
+        Enum.map value_ranges, fn(value_range) ->
+            case value_range do
+                %{"values" => [values]} ->
+                    values
+                _ ->
+                    if Keyword.get(options, :pad_empty, false) do
+                        []
+                    else
+                        nil
+                    end
+            end
+        end
+    end
+    defp parse_value_ranges(value_ranges, options, column_to) when is_integer(column_to) do
+        Enum.map value_ranges, fn(value_range) ->
+            case value_range do
+                %{"values" => [values]} when length(values) >= column_to ->
+                    values
+                %{"values" => [values]} ->
+                    pad_amount = column_to - length(values)
+                    values ++ pad(pad_amount)
+                _ ->
+                    if Keyword.get(options, :pad_empty, false) do
+                        pad(column_to)
+                    else
+                        nil
+                    end
+            end
+        end
+    end
 end
