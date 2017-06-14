@@ -9,7 +9,7 @@ This library is based on __Google Cloud API v4__ and uses __Google Service Accou
 3. Select your project name as service account and __JSON__ as key format, download the created key and rename it to __service_account.json__.
 4. Press __Manage service accounts__ on a credential page, copy your __Service Account Identifier__: _[projectname]@[domain].iam.gserviceaccount.com_
 5. Create or open existing __Google Spreadsheet document__ on your __Google Drive__ and add __Service Account Identifier__ as user invited in spreadsheet's __Collaboration Settings__.
-6. Add `{:elixir_google_spreadsheets, "~> 0.1.2"}` to __mix.exs__ under `deps` function, add `:elixir_google_spreadsheets` in your application list.
+6. Add `{:elixir_google_spreadsheets, "~> 0.1.3"}` to __mix.exs__ under `deps` function, add `:elixir_google_spreadsheets` in your application list.
 7. Add __service_account.json__ in your `config.exs` or other config file, like `dev.exs` or `prod.secret.exs`.
     config :goth,
         json: "./config/service_account.json" |> File.read!
