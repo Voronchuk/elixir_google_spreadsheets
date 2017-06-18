@@ -68,6 +68,8 @@ defmodule GSS.SpreadsheetTest do
         assert result == [@test_row1, ["", "", "", "", ""]]
         {:ok, result} = GSS.Spreadsheet.read_rows(pid, ["A1:E1", "A2:E2"])
         assert result == [@test_row1, nil]
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, [1, 2], column_to: 5)
+        assert result == [@test_row1, nil]
     end
 
     test "clear batched for 2 rows", %{spreadsheet: pid} do

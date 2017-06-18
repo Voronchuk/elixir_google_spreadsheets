@@ -99,15 +99,15 @@ defmodule GSS.Spreadsheet do
 
     @doc """
     Batched read, which returns more then one record.
-    Pass either an array of ranges, or start and end row indexes.
+    Pass either an array of ranges (or rows), or start and end row indexes.
 
     By default it returns `nils` for an empty rows, 
     use `pad_empty: true` and `column_to: integer` options to fill records
     with an empty string values.
     """
-    @spec read_rows(pid, [String.t]) :: {:ok, [spreadsheet_data | nil]} | {:error, Exception.t}
+    @spec read_rows(pid, [String.t] | [integer()]) :: {:ok, [spreadsheet_data | nil]} | {:error, Exception.t}
     def read_rows(pid, ranges), do: read_rows(pid, ranges, [])
-    @spec read_rows(pid, [String.t], Keyword.t) :: {:ok, [spreadsheet_data]} | {:error, Exception.t}
+    @spec read_rows(pid, [String.t] | [integer()], Keyword.t) :: {:ok, [spreadsheet_data]} | {:error, Exception.t}
     def read_rows(pid, ranges, options) when is_list(ranges) do
         GenServer.call(pid, {:read_rows, ranges, options})
     end
@@ -325,6 +325,14 @@ defmodule GSS.Spreadsheet do
     @doc """
     Get column value list for specific row from a spreadsheet.
     """
+    def handle_call({:read_rows, [row | _] = rows, options}, from, state) when is_integer(row) do
+        column_from = Keyword.get(options, :column_from, 1)
+        column_to = Keyword.get(options, :column_to, 26)
+        ranges = Enum.map rows, fn(row_index) ->
+            range(row_index, row_index, column_from, column_to)
+        end
+        handle_call({:read_rows, ranges, options}, from, state)
+    end
     def handle_call(
         {:read_rows, ranges, options},
         _from,
