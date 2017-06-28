@@ -16,7 +16,7 @@ defmodule GSS.Mixfile do
     end
 
     def package do
-        [ 
+        [
             name: :elixir_google_spreadsheets,
             files: ["lib", "mix.exs"],
             maintainers: ["Vyacheslav Voronchuk"],
@@ -30,7 +30,8 @@ defmodule GSS.Mixfile do
             applications: [
                 :logger,
                 :goth,
-                :httpoison
+                :httpoison,
+                :gen_stage
             ],
             mod: {GSS, []}
         ]
@@ -38,8 +39,12 @@ defmodule GSS.Mixfile do
 
     defp deps do
         [
+            {:goth, "~> 0.2.1"},
+            {:hackney, "1.6.1"},
+            {:httpoison, "~> 0.9.2"},
             {:goth, "~> 0.4.0"},
             {:httpoison, "~> 0.12"},
+            {:gen_stage, ">= 0.12.0"},
             {:earmark, ">= 0.0.0", only: :dev},
             {:ex_doc, ">= 0.0.0", only: :dev}
         ]
