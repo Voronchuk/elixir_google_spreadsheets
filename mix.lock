@@ -9,6 +9,7 @@
   "httpoison": {:hex, :httpoison, "0.9.2", "a211a8e87403a043c41218e64df250d321f236ac57f786c6a0ccf3e9e817c819", [:mix], [{:hackney, "~> 1.6.0", [hex: :hackney, optional: false]}]},
   "idna": {:hex, :idna, "1.2.0", "ac62ee99da068f43c50dc69acf700e03a62a348360126260e87f2b54eced86b2", [:rebar3], []},
   "json_web_token": {:hex, :json_web_token, "0.2.7", "b33cd43c578d582b77675870a3a8a0f5617bd6f728413ac4effe41be7e7da51a", [:mix], [{:poison, "~> 2.2", [hex: :poison, optional: false]}]},
+  "logger_file_backend": {:hex, :logger_file_backend, "0.0.10", "876f9f84ae110781207c54321ffbb62bebe02946fe3c13f0d7c5f5d8ad4fa910", [:mix], []},
   "metrics": {:hex, :metrics, "1.0.1", "25f094dea2cda98213cecc3aeff09e940299d950904393b2a29d191c346a8486", [:rebar3], []},
   "mimerl": {:hex, :mimerl, "1.0.2", "993f9b0e084083405ed8252b99460c4f0563e41729ab42d9074fd5e52439be88", [:rebar3], []},
   "poison": {:hex, :poison, "2.2.0", "4763b69a8a77bd77d26f477d196428b741261a761257ff1cf92753a0d4d24a63", [:mix], []},

@@ -46,7 +46,8 @@ defmodule GSS.Mixfile do
             {:httpoison, "~> 0.12"},
             {:gen_stage, ">= 0.12.0"},
             {:earmark, ">= 0.0.0", only: :dev},
-            {:ex_doc, ">= 0.0.0", only: :dev}
+            {:ex_doc, ">= 0.0.0", only: :dev},
+            {:logger_file_backend, ">= 0.0.10", only: :dev}
         ]
     end
 end
