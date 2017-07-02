@@ -435,24 +435,26 @@ defmodule GSS.Spreadsheet do
     @spec spreadsheet_query(:get | :post, String.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
+        params = [ssl: [{:versions, [:'tlsv1.2']}]]
         response = case type do
             :get ->
-                HTTPoison.get! @api_url_spreadsheet <> url_suffix, headers
+                HTTPoison.get! @api_url_spreadsheet <> url_suffix, headers, params
             :post ->
-                HTTPoison.post! @api_url_spreadsheet <> url_suffix, "", headers
+                HTTPoison.post! @api_url_spreadsheet <> url_suffix, "", headers, params
         end
         spreadsheet_query_response(response)
     end
     @spec spreadsheet_query(:post | :put, String.t, spreadsheet_data, Keyword.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix, data, options) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
+        params = [ssl: [{:versions, [:'tlsv1.2']}]]
         response = case type do
             :post ->
                 body = spreadsheet_query_body(data, options)
-                HTTPoison.post! @api_url_spreadsheet <> url_suffix, body, headers
+                HTTPoison.post! @api_url_spreadsheet <> url_suffix, body, headers, params
             :put ->
                 body = spreadsheet_query_body(data, options)
-                HTTPoison.put! @api_url_spreadsheet <> url_suffix, body, headers
+                HTTPoison.put! @api_url_spreadsheet <> url_suffix, body, headers, params
         end
         spreadsheet_query_response(response)
     end

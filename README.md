@@ -15,6 +15,9 @@ This library is based on __Google Cloud API v4__ and uses __Google Service Accou
         json: "./config/service_account.json" |> File.read!
 8. Run `mix deps.get && mix deps.compile`.
 
+# OTP 20
+Currently (01.07.2017) there is an issue in OTP 20, because `:crypto.mpint/1` was moved to another module and it's used in `:goth` dependency `:json_web_token`, you can use this temporary hack as a resolution, by adding this in your deps: `{:json_web_token, git: "https://github.com/starbuildr/json_web_token_ex.git", override: true}`
+
 # Usage
 Initialise spreadsheet thread with it's id which you can fetch from URL:
 
