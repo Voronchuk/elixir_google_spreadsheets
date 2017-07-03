@@ -1,7 +1,7 @@
 defmodule GSS.SpreadsheetListTest do
     use ExUnit.Case, async: true
 
-    @test_spreadsheet_id "1h85keViqbRzgTN245gEw5s9roxpaUtT7i-mNXQtT8qQ"
+    @test_spreadsheet_id Application.fetch_env!(:elixir_google_spreadsheets, :spreadsheet_id)
     @test_list "list2"
     @test_row1 ["1", "2", "3", "4", "5"]
     @test_row2 ["6", "1", "2", "3", "4", "0"]
@@ -23,7 +23,6 @@ defmodule GSS.SpreadsheetListTest do
         GSS.Spreadsheet.clear_row(pid, 3)
         GSS.Spreadsheet.clear_row(pid, 4)
     end
-
 
     test "initialize new spreadsheet list process", %{spreadsheet: pid} do
         assert GSS.Registry.spreadsheet_pid(@test_spreadsheet_id, list_name: @test_list) == pid
