@@ -1,42 +1,55 @@
 defmodule GSS.ClientTest do
   use ExUnit.Case, async: true
 
-  defmodule TestConsumer do
-    def start_link(producer) do
-      GenStage.start_link(__MODULE__, {producer, self()})
-    end
-
-    def init({producer, owner}) do
-      {:consumer, owner, subscribe_to: [producer]}
-    end
-
-    def handle_subscribe(:producer, _, _, state) do
-      {:automatic, state}
-    end
-
-    def handle_events(events, _from, owner) do
-      send(owner, {:received, events})
-      {:noreply, [], owner}
-    end
-  end
+  alias GSS.Client.RequestParams
+  alias GSS.StubModules.Consumer
 
   setup do
     {:ok, client} = GenStage.start_link(GSS.Client, :ok)
 
+    client
+    |> send_request(:get, 1)
+    |> send_request(:post, 2)
+    |> send_request(:get, 3)
+    |> send_request(:put, 4)
+    |> send_request(:get, 5)
+
     [client: client]
   end
 
-  test "add :write events to the queue and release them to client", %{client: client} do
-    Task.async(fn -> GenStage.call(client, {:write, 1}) end)
-    Task.async(fn -> GenStage.call(client, {:write, 2}) end)
-    Task.async(fn -> GenStage.call(client, {:write, 3}) end)
+  def send_request(client, method, num) do
+    request = create_request(method, num)
+    Task.async(fn -> GenStage.call(client, {:request, request}, 50_000) end)
+    client
+  end
 
-    {:ok, _cons} = TestConsumer.start_link(client)
+  def create_request(method, num) do
+    %RequestParams{method: method, url: "http://url/?n=#{num}"}
+  end
 
-    assert_receive {:received, events}
-    assert match?([{:write, _, 1}, {:write, _, 2}, {:write, _, 3}], events)
+  test "add request events to the queue and release them to read consumer", %{client: client} do
+    {:ok, _cons} = Consumer.start_link({client, partition: :read})
 
-    :ok = GenStage.stop(client)
+    assert_receive {:received, [event1, event2, event3]}
+    request1 = create_request(:get, 1)
+    assert {:request, _, ^request1} = event1
+
+    request2 = create_request(:get, 3)
+    assert {:request, _, ^request2} = event2
+
+    request3 = create_request(:get, 5)
+    assert {:request, _, ^request3} = event3
+  end
+
+  test "add request events to the queue and release them to write consumer", %{client: client} do
+    {:ok, _cons} = Consumer.start_link({client, partition: :write})
+
+    assert_receive {:received, [event1, event2]}
+    request1 = create_request(:post, 2)
+    assert {:request, _, ^request1} = event1
+
+    request2 = create_request(:put, 4)
+    assert {:request, _, ^request2} = event2
   end
 
 end

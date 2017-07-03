@@ -14,7 +14,8 @@ defmodule GSS.Supervisor do
     def init([]) do
         children = [
             worker(GSS.Registry, []),
-            supervisor(GSS.Spreadsheet.Supervisor, [])
+            supervisor(GSS.Spreadsheet.Supervisor, []),
+            supervisor(GSS.Client.Supervisor, [])
         ]
 
         supervise(children, strategy: :one_for_all)

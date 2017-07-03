@@ -6,56 +6,52 @@ defmodule GSS.Client do
   """
 
   use GenStage
+  require Logger
 
-  defstruct [:queue]
+  defmodule RequestParams do
+    defstruct [method: nil, url: nil, body: "", headers: [], options: []]
+  end
 
   def start_link do
     GenStage.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
-  def read(message, timeout \\ 30_000) do
-    GenStage.call(__MODULE__, {:read, message}, timeout)
+  @doc """
+  Issues an HTTP request with the given method to the given url.
+  """
+  def request(method, url, body \\ "", headers \\ [], options \\ []) do
+    timeout = :timer.seconds(60*60)
+    request = %RequestParams{
+      method: method,
+      url: url,
+      body: body,
+      headers: headers,
+      options: options
+    }
+    GenStage.call(__MODULE__, {:request, request}, timeout)
   end
 
-  @doc """
-  Adds an write event to the buffer queue.
-  """
-  def write(message, timeout \\ 50_000) do
-    GenStage.call(__MODULE__, {:write, message}, timeout)
+  def request_async(method, url, body \\ "", headers \\ [], options \\ []) do
+    Task.async(GSS.Client, :request, [method, url, body, headers, options])
   end
 
   ## Callbacks
 
   def init(:ok) do
-    state = %__MODULE__{
-      queue: :queue.new()
-    }
-    {:producer, state}
+    dispatcer = {GenStage.PartitionDispatcher, partitions: [:write, :read], hash: &dispatcher_hash(&1)}
+    {:producer, :queue.new(), dispatcher: dispatcer}
   end
 
   # Adds an event
-  def handle_call({:read, event}, from, state) do
-    state = state
-    |> Map.put(:queue, :queue.in({:read, from, event}, state.queue))
-
-    {:noreply, [], state}
-  end
-
-  def handle_call({:write, message}, from, state) do
-    state = state
-    |> Map.put(:queue, :queue.in({:write, from, message}, state.queue))
-
-    {:noreply, [], state}
+  def handle_call({:request, request}, from, queue) do
+    updated_queue  = :queue.in({:request, from, request}, queue)
+    {:noreply, [], updated_queue}
   end
 
   # Gives events for the next stage to process when requested
-  def handle_demand(demand, state) when demand > 0 do
-    {events, queue} = take_from_queue(state.queue, demand, [])
-    {:noreply, Enum.reverse(events), Map.put(state, :queue, queue)}
-  end
-
-  def handle_cancel(_reason, _from, state) do
-    {:noreply, [], %{state | consumer: nil}}
+  def handle_demand(demand, queue) when demand > 0 do
+    {events, updated_queue} = take_from_queue(queue, demand, [])
+    {:noreply, Enum.reverse(events), updated_queue}
   end
 
   defp take_from_queue(queue, 0, events) do
@@ -64,10 +60,16 @@ defmodule GSS.Client do
   defp take_from_queue(queue, demand, events) do
     case :queue.out(queue) do
       {{:value, {kind, from, event}}, queue} ->
-        GenStage.reply(from, :ok)
         take_from_queue(queue, demand - 1, [{kind, from, event} | events])
       {:empty, queue} ->
         take_from_queue(queue, 0, events)
+    end
+  end
+
+  def dispatcher_hash({:request, from, request} = event) do
+    case request.method do
+      :get -> {event, :read}
+      _ -> {event, :write}
     end
   end
 end

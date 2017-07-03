@@ -4,17 +4,36 @@ defmodule GSS.Client.Limiter do
   """
 
   use GenStage
+  require Logger
 
   defstruct [:max_demand, :max_interval, :producer,
              :scheduled_at, :taked_events, :interval]
 
-  def start_link(args \\ []) do
-    GenStage.start_link(__MODULE__, args)
+  @doc """
+  Starts an limiter manager linked to the current process.
+
+  If the event manager is successfully created and initialized, the function
+  returns {:ok, pid}, where pid is the PID of the server. If a process with the
+  specified server name already exists, the function returns {:error,
+  {:already_started, pid}} with the PID of that process.
+
+  ## Options
+  * `:name` - used for name registration as described in the "Name
+  registration" section of the module documentation
+  * `:interval` - ask new events from producer after `:interval` milliseconds.
+  * `:max_demand` - count of maximum requests per `:maximum_interval`
+  * `:max_interval` - maximum time that allowed in `:max_demand` requests
+  * `:clients` - list of clients with partition options. For example `[{GSS.Client, partition: :read}}]`.
+  """
+  def start_link(options \\ []) do
+    GenStage.start_link(__MODULE__, options, name: Keyword.get(options, :name))
   end
 
   ## Callbacks
 
   def init(args) do
+    Logger.debug "init: #{inspect args}"
+
     state = %__MODULE__{
       max_demand: args[:max_demand] || 5,
       max_interval: args[:max_interval] || 5_000,
@@ -22,12 +41,9 @@ defmodule GSS.Client.Limiter do
       taked_events: 0,
       scheduled_at: nil
     }
-    sync_offset = args[:sync_offset] || 0
-    subscribe_to = args[:client] || [GSS.Client]
+    Process.send_after(self(), :ask, 0)
 
-    Process.send_after(self(), :ask, sync_offset)
-
-    {:consumer, state, subscribe_to: subscribe_to}
+    {:producer_consumer, state, subscribe_to: args[:clients]}
   end
 
   # Set the subscription to manual to control when to ask for events
@@ -41,17 +57,17 @@ defmodule GSS.Client.Limiter do
   end
 
   def handle_events(events, _from, state) do
-    Enum.map(events, fn
-      {kind, from, message} -> message
-      message -> message
-    end)
-    |> Enum.join(" ")
-    |> IO.inspect(label: "#{Time.utc_now}..............handle_events")
+    Logger.debug fn -> "Limiter Handle events: #{inspect events}" end
 
     state = state
     |> Map.update!(:taked_events, &(&1 + length(events)))
     |> schedule_counts()
 
+    {:noreply, events, state}
+  end
+
+  # Gives events for the next stage to process when requested
+  def handle_demand(demand, state) when demand > 0 do
     {:noreply, [], state}
   end
 
