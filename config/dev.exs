@@ -19,3 +19,7 @@ config :elixir_google_spreadsheets, :client,
   max_demand: 2,
   max_interval: 7_000,
   interval: 700
+
+if File.exists?("config/dev.local.exs") do
+  import_config "dev.local.exs"
+end

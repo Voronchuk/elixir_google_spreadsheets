@@ -45,7 +45,8 @@ defmodule GSS.Mixfile do
             {:gen_stage, ">= 0.12.0"},
             {:earmark, ">= 0.0.0", only: :dev},
             {:ex_doc, ">= 0.0.0", only: :dev},
-            {:logger_file_backend, ">= 0.0.10", only: :dev}
+            {:logger_file_backend, ">= 0.0.10", only: [:dev, :test]},
+            {:json_web_token, git: "https://github.com/starbuildr/json_web_token_ex.git", override: true}
         ]
     end
 
