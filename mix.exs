@@ -40,9 +40,6 @@ defmodule GSS.Mixfile do
 
     defp deps do
         [
-            {:goth, "~> 0.2.1"},
-            {:hackney, "1.6.1"},
-            {:httpoison, "~> 0.9.2"},
             {:goth, "~> 0.4.0"},
             {:httpoison, "~> 0.12"},
             {:gen_stage, ">= 0.12.0"},
