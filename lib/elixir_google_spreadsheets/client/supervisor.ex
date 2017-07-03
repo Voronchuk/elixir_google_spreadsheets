@@ -8,7 +8,7 @@ defmodule GSS.Client.Supervisor do
        Supervisor.start_link(__MODULE__, [],  name: __MODULE__)
     end
 
-    @spec init([]) :: {:ok, pid}
+    @spec init([]) :: {:ok, {:supervisor.sup_flags(), [Supervisor.Spec.spec()]}} | :ignore
     def init([]) do
         limiter_args = Keyword.take(@config, [:max_demand, :interval, :max_interval])
         children = [

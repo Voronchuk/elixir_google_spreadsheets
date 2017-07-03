@@ -25,6 +25,7 @@ defmodule GSS.Client.Limiter do
     * `:max_interval` - maximum time that allowed in `:max_demand` requests
     * `:clients` - list of clients with partition options. For example `[{GSS.Client, partition: :read}}]`.
     """
+    @spec start_link(Keyword.t) :: GenServer.on_start()
     def start_link(options \\ []) do
         GenStage.start_link(__MODULE__, options, name: Keyword.get(options, :name))
     end

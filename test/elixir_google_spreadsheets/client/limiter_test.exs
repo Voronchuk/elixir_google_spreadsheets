@@ -17,7 +17,7 @@ defmodule GSS.Client.LimiterTest do
         [client: client, limiter: limiter]
     end
 
-    test "receive events in packs with limits", %{client: client, limiter: limiter} do
+    test "receive events in packs with limits", %{client: client} do
         GenStage.call(client, {:add, [1, 2, 3, 4, 5]})
 
         assert_receive {:handled_demand, [1, 2, 3], 3}
@@ -51,7 +51,7 @@ defmodule GSS.Client.LimiterTest do
         assert_receive {:handled_demand, [4, 5], 3}, 200
   end
 
-  test "receive events in expired interval", %{client: client, limiter: limiter} do
+  test "receive events in expired interval", %{client: client} do
         GenStage.call(client, {:add, [1]})
         assert_receive {:handled_demand, [1], 3}
         Process.sleep(500)

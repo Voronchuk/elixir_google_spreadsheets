@@ -5,12 +5,12 @@ defmodule GSS.Supervisor do
 
     use Supervisor
 
-    @spec start_link() :: {:ok, pid}
+    @spec start_link() :: {:ok, pid()}
     def start_link do
         Supervisor.start_link(__MODULE__, [])
     end
 
-    @spec init([]) :: {:ok, pid}
+    @spec init([]) :: {:ok, {:supervisor.sup_flags(), [Supervisor.Spec.spec()]}} | :ignore
     def init([]) do
         children = [
             worker(GSS.Registry, []),

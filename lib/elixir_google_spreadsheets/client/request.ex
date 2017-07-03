@@ -2,6 +2,10 @@ defmodule GSS.Client.Request do
     use GenStage
     require Logger
 
+    alias GSS.Client.RequestParams
+
+    @type state :: :ok
+
     @doc """
     Starts an request worker linked to the current process.
     Takes events from Limiter and send requests through HTTPoison
@@ -9,6 +13,7 @@ defmodule GSS.Client.Request do
     ## Options
     * `:limiters` - list of limiters with max_demand options. For example `[{GSS.Client.Limiter, max_demand: 1}]`.
     """
+    @spec start_link([limiters: [{GSS.Client, max_demand: number}]]) :: GenServer.on_start()
     def start_link(args) do
         GenStage.start_link(__MODULE__, args)
     end
@@ -24,6 +29,7 @@ defmodule GSS.Client.Request do
         {:automatic, state}
     end
 
+    @spec handle_events([GSS.Client.event()], GenStage.from(), state()) :: {:noreply, [], state}
     def handle_events([{:request, from, request}], _from, state) do
         Logger.debug "Request handle events: #{inspect request}"
 
@@ -34,6 +40,7 @@ defmodule GSS.Client.Request do
         {:noreply, [], state}
     end
 
+    @spec send_request(RequestParams.t) :: {:ok, HTTPoison.Response.t} | {:error, binary()}
     defp send_request(request) do
        %GSS.Client.RequestParams{
             method: method,
@@ -48,12 +55,13 @@ defmodule GSS.Client.Request do
                 {:ok, response} ->
                     {:ok, response}
                 {:error, %HTTPoison.Error{reason: reason}} ->
+                    Logger.error "Request poison error #{inspect reason}: #{inspect request}"
                     {:error, reason}
-                error ->
-                    {:error, error}
             end
         rescue
-            error -> {:error, error}
+            error ->
+                Logger.error "Request error exception #{inspect error}: #{inspect request}"
+                {:error, error}
         end
     end
 end

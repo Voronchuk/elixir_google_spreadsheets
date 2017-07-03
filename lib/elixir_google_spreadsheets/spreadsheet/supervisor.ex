@@ -17,7 +17,7 @@ defmodule GSS.Spreadsheet.Supervisor do
         {:ok, pid}
     end
 
-    @spec init([]) :: {:ok, pid}
+    @spec init([]) :: {:ok, {:supervisor.sup_flags(), [Supervisor.Spec.spec()]}} | :ignore
     def init([]) do
         children = [
             worker(GSS.Spreadsheet, [], restart: :transient)
