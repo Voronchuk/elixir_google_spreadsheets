@@ -9,15 +9,6 @@ config :elixir_google_spreadsheets, :client,
   max_interval: :timer.seconds(100),
   interval: 100
 
-config :logger,
-  backends: [{LoggerFileBackend, :file_log}],
-  handle_otp_reports: false,
-  handle_sasl_reports: false
-
-config :logger, :file_log,
-  level: :debug,
-  path: "log/#{Mix.env}.log"
-
 if File.exists?("config/test.local.exs") do
   import_config "test.local.exs"
 end

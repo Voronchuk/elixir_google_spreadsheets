@@ -167,10 +167,7 @@ defmodule GSS.Spreadsheet do
     def handle_call(:id, _from, %{spreadsheet_id: spreadsheet_id} = state) do
         {:reply, spreadsheet_id, state}
     end
-    def handle_call(:id, _from, state) do
-        IO.inspect state
-      {:no_reply, state}
-    end
+
     @doc """
     Get the shreadsheet properties
     """
