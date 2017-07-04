@@ -32,7 +32,8 @@ defmodule GSS.Mixfile do
                 :logger,
                 :goth,
                 :httpoison,
-                :gen_stage
+                :gen_stage,
+                :poison
             ],
             mod: {GSS, []}
         ]
@@ -43,6 +44,7 @@ defmodule GSS.Mixfile do
             {:goth, "~> 0.4.0"},
             {:httpoison, "~> 0.12"},
             {:gen_stage, ">= 0.12.0"},
+            {:poison, "~> 3.1"},
             {:earmark, ">= 0.0.0", only: :dev},
             {:ex_doc, ">= 0.0.0", only: :dev},
             {:logger_file_backend, ">= 0.0.10", only: [:dev, :test]},
