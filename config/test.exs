@@ -6,7 +6,7 @@ config :elixir_google_spreadsheets,
 config :elixir_google_spreadsheets, :client,
   request_workers: 30,
   max_demand: 100,
-  max_interval: :timer.seconds(100),
+  max_interval: :timer.seconds(1),
   interval: 100
 
 if File.exists?("config/test.local.exs") do
