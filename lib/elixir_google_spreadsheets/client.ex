@@ -105,19 +105,23 @@ defmodule GSS.Client do
         end
     end
 
-    # Adds an event
+    @doc ~S"""
+    Adds an event to the queue
+    """
     def handle_call({:request, request}, from, queue) do
         updated_queue  = :queue.in({:request, from, request}, queue)
         {:noreply, [], updated_queue}
     end
 
-    # Gives events for the next stage to process when requested
+    @doc ~S"""
+    Gives events for the next stage to process when requested
+    """
     def handle_demand(demand, queue) when demand > 0 do
         {events, updated_queue} = take_from_queue(queue, demand, [])
         {:noreply, Enum.reverse(events), updated_queue}
     end
 
-
+    # take demand events from the queue
     defp take_from_queue(queue, 0, events) do
         {events, queue}
     end

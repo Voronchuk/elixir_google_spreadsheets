@@ -1,4 +1,8 @@
 defmodule GSS.Client.Supervisor do
+    @moduledoc """
+    Supervisor to keep track of initialized Client processes.
+    """
+
     use Supervisor
 
     @config Application.fetch_env!(:elixir_google_spreadsheets, :client)
@@ -30,9 +34,13 @@ defmodule GSS.Client.Supervisor do
             for num <- 1..Keyword.get(@config, :request_workers, 10),
             limiter <- [GSS.Client.LimiterWriter, GSS.Client.LimiterReader]
             do
-                worker(GSS.Client.Request, [[
-                limiters: [{limiter, max_demand: 1}]
-                ]], id: :"#{limiter}#{num}", restart: :transient)
+                id = :"#{limiter}#{num}"
+                worker(
+                    GSS.Client.Request,
+                    [[name: id, limiters: [{limiter, max_demand: 1}]]],
+                    id: id,
+                    restart: :transient
+                )
             end
 
         supervise(children ++ request_workers, strategy: :one_for_one)
