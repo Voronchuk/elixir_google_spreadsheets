@@ -19,6 +19,7 @@ defmodule GSS.Client do
     end
 
     @type event :: {:request, GenStage.from(), RequestParams.t}
+    @type partition :: :write | :read
 
     @spec start_link() :: GenServer.on_start()
     def start_link do
@@ -97,7 +98,7 @@ defmodule GSS.Client do
     @doc ~S"""
     Divide request into to partitions :read and :write
     """
-    @spec dispatcher_hash(event) :: {event, :read | :write}
+    @spec dispatcher_hash(event) :: {event, partition()}
     def dispatcher_hash({:request, _from, request} = event) do
         case request.method do
             :get -> {event, :read}

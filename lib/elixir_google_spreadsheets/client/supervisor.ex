@@ -1,9 +1,10 @@
 defmodule GSS.Client.Supervisor do
     @moduledoc """
-    Supervisor to keep track of initialized Client processes.
+    Supervisor to keep track of initialized Client, Limiter and Request processes.
     """
 
     use Supervisor
+    alias GSS.{Client, Client.Limiter, Client.Request}
 
     @config Application.fetch_env!(:elixir_google_spreadsheets, :client)
 
@@ -15,31 +16,31 @@ defmodule GSS.Client.Supervisor do
     @spec init([]) :: {:ok, {:supervisor.sup_flags(), [Supervisor.Spec.spec()]}} | :ignore
     def init([]) do
         limiter_args = Keyword.take(@config, [:max_demand, :interval, :max_interval])
+
         children = [
-            worker(GSS.Client, []),
-            worker(GSS.Client.Limiter, [
+            worker(Client, []),
+            worker(Limiter, [
                 limiter_args
-                |> Keyword.put(:clients, [{GSS.Client, partition: :write}])
-                |> Keyword.put(:name, GSS.Client.LimiterWriter)
-            ], id: LimiterWriter, restart: :transient),
-            worker(GSS.Client.Limiter, [
+                |> Keyword.put(:clients, [{Client, partition: :write}])
+                |> Keyword.put(:name, Limiter.Writer)
+            ], id: Limiter.Writer),
+            worker(Limiter, [
                 limiter_args
                 |> Keyword.put(:partition, :read)
-                |> Keyword.put(:clients, [{GSS.Client, partition: :read}])
-                |> Keyword.put(:name, GSS.Client.LimiterReader)
-            ], id: LimiterReader, restart: :transient)
+                |> Keyword.put(:clients, [{Client, partition: :read}])
+                |> Keyword.put(:name, Limiter.Reader)
+            ], id: Limiter.Reader)
         ]
 
         request_workers =
             for num <- 1..Keyword.get(@config, :request_workers, 10),
-            limiter <- [GSS.Client.LimiterWriter, GSS.Client.LimiterReader]
+            {limiter, name} <- [{Limiter.Writer, Request.Write}, {Limiter.Reader, Request.Read}]
             do
-                id = :"#{limiter}#{num}"
+                name = :"#{name}#{num}"
                 worker(
-                    GSS.Client.Request,
-                    [[name: id, limiters: [{limiter, max_demand: 1}]]],
-                    id: id,
-                    restart: :transient
+                    Request,
+                    [[name: name, limiters: [{limiter, max_demand: 1}]]],
+                    id: name
                 )
             end
 
