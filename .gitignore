@@ -2,3 +2,5 @@ _build
 deps
 config/service_account.json
 doc
+config/*.local.exs
+.editorconfig

@@ -11,12 +11,13 @@ defmodule GSS.Mixfile do
             build_embedded: Mix.env == :prod,
             start_permanent: Mix.env == :prod,
             package: package(),
+            elixirc_paths: elixirc_paths(Mix.env),
             deps: deps()
         ]
     end
 
     def package do
-        [ 
+        [
             name: :elixir_google_spreadsheets,
             files: ["lib", "mix.exs"],
             maintainers: ["Vyacheslav Voronchuk"],
@@ -30,7 +31,9 @@ defmodule GSS.Mixfile do
             applications: [
                 :logger,
                 :goth,
-                :httpoison
+                :httpoison,
+                :gen_stage,
+                :poison
             ],
             mod: {GSS, []}
         ]
@@ -40,8 +43,16 @@ defmodule GSS.Mixfile do
         [
             {:goth, "~> 0.4.0"},
             {:httpoison, "~> 0.12"},
+            {:gen_stage, ">= 0.12.0"},
+            {:poison, "~> 3.1"},
             {:earmark, ">= 0.0.0", only: :dev},
-            {:ex_doc, ">= 0.0.0", only: :dev}
+            {:ex_doc, ">= 0.0.0", only: :dev},
+            {:logger_file_backend, ">= 0.0.10", only: [:dev, :test]},
+            {:json_web_token, git: "https://github.com/starbuildr/json_web_token_ex.git", override: true},
+            {:dialyxir, "~> 0.5", only: :dev, runtime: false}
         ]
     end
+
+    defp elixirc_paths(:test), do: ["lib", "test/stub_modules"]
+    defp elixirc_paths(_), do: ["lib"]
 end

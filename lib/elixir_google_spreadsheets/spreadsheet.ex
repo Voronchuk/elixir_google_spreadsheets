@@ -7,6 +7,7 @@ defmodule GSS.Spreadsheet do
 
     require Logger
     use GenServer
+    alias GSS.Client
 
     @typedoc """
     State of currently active Google spreadsheet:
@@ -17,21 +18,20 @@ defmodule GSS.Spreadsheet do
     """
     @type state :: map()
     @type spreadsheet_data :: [String.t]
-    @type spreadsheet_response :: {:json, map()} | {:error, Exception.t}
+    @type spreadsheet_response :: {:json, map()} | {:error, Exception.t} | no_return()
 
     @api_url_spreadsheet "https://sheets.googleapis.com/v4/spreadsheets/"
 
 
     @spec start_link(String.t, Keyword.t) :: {:ok, pid}
     def start_link(spreadsheet_id, opts) do
-        GenServer.start_link(__MODULE__, [spreadsheet_id, opts], Keyword.take(opts, [:name]))
+        GenServer.start_link(__MODULE__, {spreadsheet_id, opts}, Keyword.take(opts, [:name]))
     end
 
-    @spec init(String.t) :: {:ok, state}
-    def init([spreadsheet_id, opts]) do
+    @spec init({String.t, Keyword.t}) :: {:ok, state}
+    def init({spreadsheet_id, opts}) do
         {:ok, %{spreadsheet_id: spreadsheet_id, list_name: Keyword.get(opts, :list_name)}}
     end
-
 
     @doc """
     Get spreadsheet internal id.
@@ -101,7 +101,7 @@ defmodule GSS.Spreadsheet do
     Batched read, which returns more then one record.
     Pass either an array of ranges (or rows), or start and end row indexes.
 
-    By default it returns `nils` for an empty rows, 
+    By default it returns `nils` for an empty rows,
     use `pad_empty: true` and `column_to: integer` options to fill records
     with an empty string values.
     """
@@ -147,7 +147,7 @@ defmodule GSS.Spreadsheet do
     Batch update to write multiple rows.
 
     Range schema should define the same amount of rows as
-    amound of records in data and same amount of columns 
+    amound of records in data and same amount of columns
     as entries in data record.
     """
     @spec write_rows(pid, [String.t], [spreadsheet_data]) :: :ok
@@ -431,17 +431,11 @@ defmodule GSS.Spreadsheet do
         end
     end
 
-
     @spec spreadsheet_query(:get | :post, String.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
         params = [ssl: [{:versions, [:'tlsv1.2']}]]
-        response = case type do
-            :get ->
-                HTTPoison.get! @api_url_spreadsheet <> url_suffix, headers, params
-            :post ->
-                HTTPoison.post! @api_url_spreadsheet <> url_suffix, "", headers, params
-        end
+        response = Client.request(type, @api_url_spreadsheet <> url_suffix, "", headers, params)
         spreadsheet_query_response(response)
     end
     @spec spreadsheet_query(:post | :put, String.t, spreadsheet_data, Keyword.t) :: spreadsheet_response
@@ -451,10 +445,10 @@ defmodule GSS.Spreadsheet do
         response = case type do
             :post ->
                 body = spreadsheet_query_body(data, options)
-                HTTPoison.post! @api_url_spreadsheet <> url_suffix, body, headers, params
+                Client.request(:post, @api_url_spreadsheet <> url_suffix, body, headers, params)
             :put ->
                 body = spreadsheet_query_body(data, options)
-                HTTPoison.put! @api_url_spreadsheet <> url_suffix, body, headers, params
+                Client.request(:put, @api_url_spreadsheet <> url_suffix, body, headers, params)
         end
         spreadsheet_query_response(response)
     end
@@ -462,23 +456,23 @@ defmodule GSS.Spreadsheet do
     defp spreadsheet_query_post_batch(url_suffix, request, _options) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
         body = Poison.encode!(request)
-        response = HTTPoison.post! @api_url_spreadsheet <> url_suffix, body, headers
+        response = Client.request(:post, @api_url_spreadsheet <> url_suffix, body, headers)
         spreadsheet_query_response(response)
     end
 
-    @spec spreadsheet_query_response(%HTTPoison.Response{}) :: spreadsheet_response
+    @spec spreadsheet_query_response({:ok | :error, %HTTPoison.Response{}}) :: spreadsheet_response
     defp spreadsheet_query_response(response) do
-        case response do
-            %{status_code: 200, body: body} ->
-                json = Poison.decode!(body)
-                {:json, json}
-            _ ->
-                Logger.error fn -> "Spreadsheet query: #{inspect(response)}" end
+        with {:ok, %{status_code: 200, body: body}} <- response,
+             {:ok, json} <- Poison.decode(body) do
+             {:json, json}
+        else
+            {:error, reason}->
+                Logger.error fn -> "Spreadsheet query: #{inspect(reason)}" end
                 {:error, GSS.GoogleApiError}
         end
     end
 
-    @spec spreadsheet_query_body(spreadsheet_data, Keyword.t) :: String.t
+    @spec spreadsheet_query_body(spreadsheet_data, Keyword.t) :: String.t | no_return()
     defp spreadsheet_query_body(data, options) do
         range = Keyword.fetch!(options, :range)
         major_dimension = Keyword.get(options, :major_dimension, "ROWS")
@@ -518,15 +512,14 @@ defmodule GSS.Spreadsheet do
             to_string([64 + index])
           i when i > 26 and i < 256 ->
             to_string([64 + div(index, 26), 64 + rem(index, 26)])
-            _ ->
-                raise GSS.InvalidColumnIndex, message: "Invalid column index"
+          _ ->
+            raise GSS.InvalidColumnIndex, message: "Invalid column index"
         end
     end
 
     @spec maybe_attach_list(state) :: String.t
     defp maybe_attach_list(%{list_name: nil}), do: ""
     defp maybe_attach_list(%{list_name: list_name}) when is_bitstring(list_name), do: "#{list_name}!"
-
 
     @spec parse_value_ranges([map()], Keyword.t) :: [[String.t | nil]]
     defp parse_value_ranges(value_ranges, options) do

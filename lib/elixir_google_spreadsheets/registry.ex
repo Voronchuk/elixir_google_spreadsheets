@@ -34,7 +34,6 @@ defmodule GSS.Registry do
         {:ok, state}
     end
 
-
     @doc """
     Get account authorization token.
     """
@@ -59,7 +58,6 @@ defmodule GSS.Registry do
         GenServer.call(__MODULE__, {:spreadsheet_pid, spreadsheet_id, opts})
     end
 
-
     @doc """
     Get account authorization token, issue new token in case old has expired.
     """
@@ -78,7 +76,7 @@ defmodule GSS.Registry do
         new_state = Map.put(state, :auth, refresh_token())
         {:reply, new_state.auth.token, new_state}
     end
-    
+
     @doc """
     Update :active_sheets registry record.
     """
@@ -104,7 +102,6 @@ defmodule GSS.Registry do
         registry_id = id(spreadsheet_id, opts)
         {:reply, Map.get(active_sheets, registry_id, nil), state}
     end
-
 
     @spec refresh_token() :: map()
     defp refresh_token do
