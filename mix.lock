@@ -7,7 +7,7 @@
   "hackney": {:hex, :hackney, "1.8.6", "21a725db3569b3fb11a6af17d5c5f654052ce9624219f1317e8639183de4a423", [:rebar3], [{:certifi, "1.2.1", [hex: :certifi, optional: false]}, {:idna, "5.0.2", [hex: :idna, optional: false]}, {:metrics, "1.0.1", [hex: :metrics, optional: false]}, {:mimerl, "1.0.2", [hex: :mimerl, optional: false]}, {:ssl_verify_fun, "1.1.1", [hex: :ssl_verify_fun, optional: false]}]},
   "httpoison": {:hex, :httpoison, "0.12.0", "8fc3d791c5afe6beb0093680c667dd4ce712a49d89c38c3fe1a43100dd76cf90", [:mix], [{:hackney, "~> 1.8.0", [hex: :hackney, optional: false]}]},
   "idna": {:hex, :idna, "5.0.2", "ac203208ada855d95dc591a764b6e87259cb0e2a364218f215ad662daa8cd6b4", [:rebar3], [{:unicode_util_compat, "0.2.0", [hex: :unicode_util_compat, optional: false]}]},
-  "json_web_token": {:git, "https://github.com/starbuildr/json_web_token_ex.git", "77117155912c614a6a89ec5d22ea2feeca940900", []},
+  "json_web_token": {:hex, :json_web_token, "0.2.9", "540423b008ebb2dc01f0efb5cf583e9c53176121936d87c36dcbe50bd4f11ef9", [:mix], [{:poison, "~> 3.1", [hex: :poison, optional: false]}]},
   "logger_file_backend": {:hex, :logger_file_backend, "0.0.10", "876f9f84ae110781207c54321ffbb62bebe02946fe3c13f0d7c5f5d8ad4fa910", [:mix], []},
   "metrics": {:hex, :metrics, "1.0.1", "25f094dea2cda98213cecc3aeff09e940299d950904393b2a29d191c346a8486", [:rebar3], []},
   "mimerl": {:hex, :mimerl, "1.0.2", "993f9b0e084083405ed8252b99460c4f0563e41729ab42d9074fd5e52439be88", [:rebar3], []},

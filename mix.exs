@@ -4,7 +4,7 @@ defmodule GSS.Mixfile do
     def project do
         [
             app: :elixir_google_spreadsheets,
-            version: "0.1.5",
+            version: "0.1.6",
             elixir: "~> 1.4",
             description: "Elixir library to read and write data of Google Spreadsheets.",
             docs: [extras: ["README.md"]],
@@ -48,7 +48,7 @@ defmodule GSS.Mixfile do
             {:earmark, ">= 0.0.0", only: :dev},
             {:ex_doc, ">= 0.0.0", only: :dev},
             {:logger_file_backend, ">= 0.0.10", only: [:dev, :test]},
-            {:json_web_token, git: "https://github.com/starbuildr/json_web_token_ex.git", override: true},
+            #{:json_web_token, git: "https://github.com/starbuildr/json_web_token_ex.git", override: true},
             {:dialyxir, "~> 0.5", only: :dev, runtime: false}
         ]
     end
