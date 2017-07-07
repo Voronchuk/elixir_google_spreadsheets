@@ -9,11 +9,22 @@ This library is based on __Google Cloud API v4__ and uses __Google Service Accou
 3. Select your project name as service account and __JSON__ as key format, download the created key and rename it to __service_account.json__.
 4. Press __Manage service accounts__ on a credential page, copy your __Service Account Identifier__: _[projectname]@[domain].iam.gserviceaccount.com_
 5. Create or open existing __Google Spreadsheet document__ on your __Google Drive__ and add __Service Account Identifier__ as user invited in spreadsheet's __Collaboration Settings__.
-6. Add `{:elixir_google_spreadsheets, "~> 0.1.4"}` to __mix.exs__ under `deps` function, add `:elixir_google_spreadsheets` in your application list.
+6. Add `{:elixir_google_spreadsheets, "~> 0.1.6"}` to __mix.exs__ under `deps` function, add `:elixir_google_spreadsheets` in your application list.
 7. Add __service_account.json__ in your `config.exs` or other config file, like `dev.exs` or `prod.secret.exs`.
     config :goth,
         json: "./config/service_account.json" |> File.read!
 8. Run `mix deps.get && mix deps.compile`.
+
+## API limits
+For the non-default Google API limits, you can tune the following settings locally:
+
+```
+config :elixir_google_spreadsheets, :client,
+  request_workers: 50,
+  max_demand: 100,
+  max_interval: :timer.minutes(1),
+  interval: 100
+```
 
 # OTP 20
 Currently (01.07.2017) there is an issue in OTP 20, because `:crypto.mpint/1` was moved to another module and it's used in `:goth` dependency `:json_web_token`, you can use this temporary hack as a resolution, by adding this in your deps: `{:json_web_token, git: "https://github.com/starbuildr/json_web_token_ex.git", override: true}`
