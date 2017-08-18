@@ -41,7 +41,7 @@ defmodule GSS.Mixfile do
 
     defp deps do
         [
-            {:goth, "~> 0.4.0"},
+            {:goth, "~> 0.5.0"},
             {:httpoison, "~> 0.12"},
             {:gen_stage, ">= 0.12.0"},
             {:poison, "~> 3.1"},
