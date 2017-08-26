@@ -3,6 +3,9 @@ Elixir library to read and write data of Google Spreadsheets.
 
 This library is based on __Google Cloud API v4__ and uses __Google Service Accounts__ to manage it's content.
 
+## Integration with Ecto
+Check [ecto_gss](https://github.com/Voronchuk/ecto_gss) if you need to integrate your Google Spreadsheet with Ecto changesets for validation and other features.
+
 # Setup
 1. Use [this](https://console.developers.google.com/start/api?id=sheets.googleapis.com) wizard to create or select a project in the Google Developers Console and automatically turn on the API. Click __Continue__, then __Go to credentials__.
 2. On the __Add credentials to your project page__, create __Service account key__.
