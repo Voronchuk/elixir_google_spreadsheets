@@ -2,7 +2,7 @@ defmodule GSS.SpreadsheetListTest do
     use ExUnit.Case, async: true
 
     @test_spreadsheet_id Application.fetch_env!(:elixir_google_spreadsheets, :spreadsheet_id)
-    @test_list "list2"
+    @test_list "list space"
     @test_row1 ["1", "2", "3", "4", "5"]
     @test_row2 ["6", "1", "2", "3", "4", "0"]
     @test_row3 ["7", "7", "8"]

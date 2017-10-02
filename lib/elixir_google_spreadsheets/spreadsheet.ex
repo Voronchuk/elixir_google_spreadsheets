@@ -343,8 +343,8 @@ defmodule GSS.Spreadsheet do
         datetime_render_option = Keyword.get(options, :datetime_render_option, "FORMATTED_STRING")
 
         str_ranges = ranges
-        |> Enum.map(&("ranges=#{maybe_attach_list(state)}#{&1}"))
-        |> Enum.join("&")
+        |> Enum.map(&({:ranges, "#{maybe_attach_list(state)}#{&1}"}))
+        |> URI.encode_query
         query = "#{spreadsheet_id}/values:batchGet" <>
             "?majorDimension=#{major_dimension}&valueRenderOption=#{value_render_option}" <>
             "&dateTimeRenderOption=#{datetime_render_option}&#{str_ranges}"
@@ -377,8 +377,8 @@ defmodule GSS.Spreadsheet do
         %{spreadsheet_id: spreadsheet_id} = state
     ) do
         str_ranges = ranges
-        |> Enum.map(&("ranges=#{maybe_attach_list(state)}#{&1}"))
-        |> Enum.join("&")
+        |> Enum.map(&({:ranges, "#{maybe_attach_list(state)}#{&1}"}))
+        |> URI.encode_query
         query = "#{spreadsheet_id}/values:batchClear?#{str_ranges}"
 
         case spreadsheet_query(:post, query) do
