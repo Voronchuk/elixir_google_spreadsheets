@@ -47,7 +47,7 @@ defmodule GSS.Client.Request do
         Logger.debug "Request handle events: #{inspect request}"
 
         response = send_request(request)
-        Logger.info "Response #{inspect response}"
+        Logger.debug "Response #{inspect response}"
         GenStage.reply(from, response)
 
         {:noreply, [], state}
