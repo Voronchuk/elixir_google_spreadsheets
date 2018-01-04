@@ -487,13 +487,13 @@ defmodule GSS.Spreadsheet do
     def range(row_from, row_to, column_from, column_to)
     when row_from <= row_to and column_from <= column_to
     and row_to < 1001 do
-        column_from_letter = col_index_to_letter(column_from)
-        column_to_letter = col_index_to_letter(column_to)
-        "#{column_from_letter}#{row_from}:#{column_to_letter}#{row_to}"
+        column_from_letters = col_number_to_letters(column_from)
+        column_to_letters = col_number_to_letters(column_to)
+        "#{column_from_letters}#{row_from}:#{column_to_letters}#{row_to}"
     end
     def range(_, _, _, _) do
         raise GSS.InvalidRange,
-            message: "Max rows 1000, max columns 255, `to` value should be greater then `from`"
+            message: "Max rows 1000, `to` value should be greater than `from`"
     end
     @spec range(integer(), integer(), integer(), integer(), state) :: String.t
     def range(row_from, row_to, column_from, column_to, state) do
@@ -505,16 +505,19 @@ defmodule GSS.Spreadsheet do
         for _i <- 1..amount, do: ""
     end
 
-    @spec col_index_to_letter(integer()) :: String.t
-    defp col_index_to_letter(index) do
-        case index do
-          i when i > 0 and i < 27 ->
-            to_string([64 + index])
-          i when i > 26 and i < 256 ->
-            to_string([64 + div(index, 26), 64 + rem(index, 26)])
-          _ ->
-            raise GSS.InvalidColumnIndex, message: "Invalid column index"
-        end
+    @spec col_number_to_letters(integer()) :: String.t
+    def col_number_to_letters(col_number) do
+      indices = index_to_index_list(col_number - 1)
+      charlist = for i <- indices, do: i + ?A
+      to_string(charlist)
+    end
+
+    defp index_to_index_list(index, list \\ [])
+    defp index_to_index_list(index, list) when index >= 26 do
+      index_to_index_list(div(index, 26) - 1, [rem(index, 26) | list])
+    end
+    defp index_to_index_list(index, list) when index >= 0 and index < 26 do
+      [index | list]
     end
 
     @spec maybe_attach_list(state) :: String.t
