@@ -12,7 +12,7 @@ Check [ecto_gss](https://github.com/Voronchuk/ecto_gss) if you need to integrate
 3. Select your project name as service account and __JSON__ as key format, download the created key and rename it to __service_account.json__.
 4. Press __Manage service accounts__ on a credential page, copy your __Service Account Identifier__: _[projectname]@[domain].iam.gserviceaccount.com_
 5. Create or open existing __Google Spreadsheet document__ on your __Google Drive__ and add __Service Account Identifier__ as user invited in spreadsheet's __Collaboration Settings__.
-6. Add `{:elixir_google_spreadsheets, "~> 0.1.8"}` to __mix.exs__ under `deps` function, add `:elixir_google_spreadsheets` in your application list.
+6. Add `{:elixir_google_spreadsheets, "~> 0.1.9"}` to __mix.exs__ under `deps` function, add `:elixir_google_spreadsheets` in your application list.
 7. Add __service_account.json__ in your `config.exs` or other config file, like `dev.exs` or `prod.secret.exs`.
     config :goth,
         json: "./config/service_account.json" |> File.read!
@@ -70,5 +70,5 @@ Default values:
 * `insert_data_option = "INSERT_ROWS"`
 
 # Restrictions
-* Max columns __26__, max rows __1000__;
+* Recommended columns __26__ (more on your own risk), max rows __1000__;
 * __This library is in it's early beta, use on your own risk. Pull requests / reports / feedback are welcome.__
