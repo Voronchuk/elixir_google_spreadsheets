@@ -150,7 +150,7 @@ defmodule GSS.Spreadsheet do
     amound of records in data and same amount of columns
     as entries in data record.
     """
-    @spec write_rows(pid, [String.t], [spreadsheet_data]) :: :ok
+    @spec write_rows(pid, [String.t], [spreadsheet_data]) :: {:ok, any()}
     def write_rows(pid, ranges, data), do: write_rows(pid, ranges, data, [])
     @spec write_rows(pid, [String.t], [spreadsheet_data], Keyword.t) :: :ok
     def write_rows(pid, ranges, data, options)
