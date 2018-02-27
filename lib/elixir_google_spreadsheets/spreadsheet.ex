@@ -434,14 +434,14 @@ defmodule GSS.Spreadsheet do
     @spec spreadsheet_query(:get | :post, String.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
-        params = [ssl: [{:versions, [:'tlsv1.2']}]]
+        params = Client.config(:request_opts)
         response = Client.request(type, @api_url_spreadsheet <> url_suffix, "", headers, params)
         spreadsheet_query_response(response)
     end
     @spec spreadsheet_query(:post | :put, String.t, spreadsheet_data, Keyword.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix, data, options) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
-        params = [ssl: [{:versions, [:'tlsv1.2']}]]
+        params = Client.config(:request_opts)
         response = case type do
             :post ->
                 body = spreadsheet_query_body(data, options)
@@ -455,8 +455,9 @@ defmodule GSS.Spreadsheet do
     @spec spreadsheet_query_post_batch(String.t, map(), Keyword.t) :: spreadsheet_response
     defp spreadsheet_query_post_batch(url_suffix, request, _options) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
+        params = Client.config(:request_opts)
         body = Poison.encode!(request)
-        response = Client.request(:post, @api_url_spreadsheet <> url_suffix, body, headers)
+        response = Client.request(:post, @api_url_spreadsheet <> url_suffix, body, headers, params)
         spreadsheet_query_response(response)
     end
 

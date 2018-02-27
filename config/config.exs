@@ -31,9 +31,15 @@ config :goth,
     json: "./config/service_account.json" |> File.read!
 
 config :elixir_google_spreadsheets, :client,
-  request_workers: 50,
-  max_demand: 100,
-  max_interval: :timer.minutes(1),
-  interval: 100
-
+    request_workers: 50,
+    max_demand: 100,
+    max_interval: :timer.minutes(1),
+    interval: 100,
+    result_timeout: :timer.minutes(10),
+    request_opts: [
+        ssl: [{:versions, [:'tlsv1.2']}],
+        timeout: :timer.seconds(8),
+        recv_timeout: :timer.seconds(5)
+    ]
+  
 import_config "#{Mix.env}.exs"

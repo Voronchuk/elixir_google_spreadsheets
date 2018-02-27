@@ -42,7 +42,7 @@ defmodule GSS.Client do
     Body:
     * binary, char list or an iolist
     * `{:form, [{K, V}, ...]}` - send a form url encoded
-    * `{:file, "/path/to/file"}` - send a file
+    * `{:file, ~s(/path/to/file)}` - send a file
     * `{:stream, enumerable}` - lazily send a stream of binaries/charlists
 
     Options:
@@ -64,12 +64,12 @@ defmodule GSS.Client do
 
     ## Examples
 
-      request(:post, "https://my.website.com", "{\"foo\": 3}", [{"Accept", "application/json"}])
+      request(:post, ~s(https://my.website.com), ~s({\"foo\": 3}), [{"Accept", "application/json"}])
 
     """
     @spec request(atom, binary, HTTPoison.body, HTTPoison.headers, Keyword.t) :: {:ok, HTTPoison.Response.t} | {:error, binary} | no_return
     def request(method, url, body \\ "", headers \\ [], options \\ []) do
-        result_timeout = options[:result_timeout] || :timer.seconds(60*60)
+        result_timeout = options[:result_timeout] || config(:result_timeout)
         request = %RequestParams{
           method: method,
           url: url,
@@ -120,6 +120,16 @@ defmodule GSS.Client do
     def handle_demand(demand, queue) when demand > 0 do
         {events, updated_queue} = take_from_queue(queue, demand, [])
         {:noreply, Enum.reverse(events), updated_queue}
+    end
+
+    
+    @doc """
+    Read config settings scoped for GSS client.
+    """
+    @spec config(atom(), any()) :: any()
+    def config(key, default \\ nil) do
+      Application.get_env(:elixir_google_spreadsheets, :client)
+      |> Keyword.get(key, default)
     end
 
     # take demand events from the queue
