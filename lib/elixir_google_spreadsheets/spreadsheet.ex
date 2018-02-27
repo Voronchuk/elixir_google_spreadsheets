@@ -341,8 +341,9 @@ defmodule GSS.Spreadsheet do
         major_dimension = Keyword.get(options, :major_dimension, "ROWS")
         value_render_option = Keyword.get(options, :value_render_option, "FORMATTED_VALUE")
         datetime_render_option = Keyword.get(options, :datetime_render_option, "FORMATTED_STRING")
+        batched_ranges = Keyword.get(options, :batched_ranges, ranges)
 
-        str_ranges = ranges
+        str_ranges = batched_ranges
         |> Enum.map(&({:ranges, "#{maybe_attach_list(state)}#{&1}"}))
         |> URI.encode_query
         query = "#{spreadsheet_id}/values:batchGet" <>
@@ -361,6 +362,17 @@ defmodule GSS.Spreadsheet do
     def handle_call({:read_rows, row_index_start, row_index_end, options}, from, state) do
         column_from = Keyword.get(options, :column_from, 1)
         column_to = Keyword.get(options, :column_to, 26)
+
+        options =
+            if Keyword.get(options, :batch_range, true) do
+                batched_range = range(row_index_start, row_index_end, column_from, column_to)
+                options
+                |> Keyword.put(:batched_ranges, [batched_range])
+                |> Keyword.put(:batched_rows, (row_index_end - row_index_start) + 1)
+            else
+                options
+            end
+
         ranges = Enum.map row_index_start..row_index_end, fn(row_index) ->
             range(row_index, row_index, column_from, column_to)
         end
@@ -486,8 +498,7 @@ defmodule GSS.Spreadsheet do
 
     @spec range(integer(), integer(), integer(), integer()) :: String.t
     def range(row_from, row_to, column_from, column_to)
-    when row_from <= row_to and column_from <= column_to
-    and row_to < 1001 do
+    when row_from <= row_to and column_from <= column_to and row_to < 1001 do
         column_from_letters = col_number_to_letters(column_from)
         column_to_letters = col_number_to_letters(column_to)
         "#{column_from_letters}#{row_from}:#{column_to_letters}#{row_to}"
@@ -525,41 +536,41 @@ defmodule GSS.Spreadsheet do
     defp maybe_attach_list(%{list_name: nil}), do: ""
     defp maybe_attach_list(%{list_name: list_name}) when is_bitstring(list_name), do: "#{list_name}!"
 
-    @spec parse_value_ranges([map()], Keyword.t) :: [[String.t | nil]]
+
+    @spec parse_value_ranges([map()], Keyword.t) :: [[String.t] | nil]
     defp parse_value_ranges(value_ranges, options) do
         column_to = Keyword.get(options, :column_to)
         parse_value_ranges(value_ranges, options, column_to)
     end
-    @spec parse_value_ranges([map()], Keyword.t, integer() | nil) :: [[String.t | nil]]
-    defp parse_value_ranges(value_ranges, options, nil) do
-        Enum.map value_ranges, fn(value_range) ->
-            case value_range do
-                %{"values" => [values]} ->
-                    values
-                _ ->
-                    if Keyword.get(options, :pad_empty, false) do
-                        []
-                    else
-                        nil
-                    end
-            end
+    @spec parse_value_ranges([map()], Keyword.t, integer() | nil) :: [[String.t] | nil]
+    defp parse_value_ranges(value_ranges, options, column_to) when is_integer(column_to) or is_nil(column_to) do
+        total_rows = Keyword.get(options, :batched_rows, 1)
+        pad_empty = Keyword.get(options, :pad_empty, false)
+        response = Enum.flat_map value_ranges, &(parse_value(&1, column_to, pad_empty))
+        if length(response) < total_rows do
+            padding = List.duplicate(empty_row(column_to, pad_empty), total_rows - length(response))
+            response ++ padding
+        else
+            response
         end
     end
-    defp parse_value_ranges(value_ranges, options, column_to) when is_integer(column_to) do
-        Enum.map value_ranges, fn(value_range) ->
-            case value_range do
-                %{"values" => [values]} when length(values) >= column_to ->
-                    values
-                %{"values" => [values]} ->
-                    pad_amount = column_to - length(values)
-                    values ++ pad(pad_amount)
-                _ ->
-                    if Keyword.get(options, :pad_empty, false) do
-                        pad(column_to)
-                    else
-                        nil
-                    end
-            end
-        end
+
+    @spec parse_value(map(), integer() | nil, boolean()) :: [[String.t] | nil]
+    defp parse_value(%{"values" => values}, column_to, _) when is_list(values) and is_integer(column_to) do
+        Enum.map values, &(value_range_block_wrapper(&1, column_to))
+    end
+    defp parse_value(%{"values" => values}, _, false) when is_list(values), do: values
+    defp parse_value(_, column_to, pad_empty), do: [empty_row(column_to, pad_empty)]
+
+    @spec empty_row(integer() | nil, boolean()) :: [String.t] | nil
+    defp empty_row(nil, true), do: []
+    defp empty_row(column_to, true), do: pad(column_to)
+    defp empty_row(_, false), do: nil
+    
+    @spec value_range_block_wrapper([String.t], integer()) :: [String.t]
+    defp value_range_block_wrapper(values, column_to) when length(values) >= column_to, do: values
+    defp value_range_block_wrapper(values, column_to) do
+        pad_amount = column_to - length(values)
+        values ++ pad(pad_amount)
     end
 end

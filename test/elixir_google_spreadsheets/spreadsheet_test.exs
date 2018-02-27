@@ -63,13 +63,13 @@ defmodule GSS.SpreadsheetTest do
         assert result == [nil, nil]
         {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 2, column_to: 5, pad_empty: true)
         assert result == [["", "", "", "", ""], ["", "", "", "", ""]]
-        :ok = GSS.Spreadsheet.write_row(pid, 1, @test_row1)
-        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 2, column_to: 5, pad_empty: true)
-        assert result == [@test_row1, ["", "", "", "", ""]]
-        {:ok, result} = GSS.Spreadsheet.read_rows(pid, ["A1:E1", "A2:E2"])
-        assert result == [@test_row1, nil]
-        {:ok, result} = GSS.Spreadsheet.read_rows(pid, [1, 2], column_to: 5)
-        assert result == [@test_row1, nil]
+        :ok = GSS.Spreadsheet.write_row(pid, 2, @test_row1)
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 3, column_to: 5, pad_empty: true)
+        assert result == [["", "", "", "", ""], @test_row1, ["", "", "", "", ""]]
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, ["A1:E1", "A2:E2", "A3:E3"])
+        assert result == [nil, @test_row1, nil]
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, [1, 2, 3], column_to: 5)
+        assert result == [nil, @test_row1, nil]
     end
 
     test "clear batched for 2 rows", %{spreadsheet: pid} do
