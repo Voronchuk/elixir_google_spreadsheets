@@ -264,11 +264,11 @@ defmodule GSS.Spreadsheet do
         query = "#{spreadsheet_id}/values/#{range}?valueInputOption=#{value_input_option}"
 
         case spreadsheet_query(:put, query, column_list, options ++ [range: range]) do
-                {:reply, :ok, state}
-            {:error, exception} ->
-                {:reply, {:error, exception}, state}
           {:json, %{"updatedRows" => 1, "updatedColumns" => updated_columns}}
           when updated_columns > 0 ->
+            {:reply, :ok, state}
+          {:error, exception} ->
+            {:reply, {:error, exception}, state}
         end
     end
 
