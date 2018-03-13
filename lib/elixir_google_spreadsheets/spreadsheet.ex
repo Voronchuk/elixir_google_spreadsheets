@@ -264,11 +264,11 @@ defmodule GSS.Spreadsheet do
         query = "#{spreadsheet_id}/values/#{range}?valueInputOption=#{value_input_option}"
 
         case spreadsheet_query(:put, query, column_list, options ++ [range: range]) do
-            {:json, %{"updatedRows" => 1, "updatedColumns" => updated_columns}}
-            when updated_columns == write_cells_count ->
                 {:reply, :ok, state}
             {:error, exception} ->
                 {:reply, {:error, exception}, state}
+          {:json, %{"updatedRows" => 1, "updatedColumns" => updated_columns}}
+          when updated_columns > 0 ->
         end
     end
 
@@ -293,7 +293,7 @@ defmodule GSS.Spreadsheet do
         case spreadsheet_query(:post, query, column_list, options ++ [range: range]) do
             {:json, %{"updates" => %{
                 "updatedRows" => 1, "updatedColumns" => updated_columns
-            }}} when updated_columns == write_cells_count ->
+            }}} when updated_columns > 0 ->
                 {:reply, :ok, state}
             {:error, exception} ->
                 {:reply, {:error, exception}, state}
