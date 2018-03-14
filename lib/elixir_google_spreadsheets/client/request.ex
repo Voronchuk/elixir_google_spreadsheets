@@ -64,7 +64,7 @@ defmodule GSS.Client.Request do
         } = request
         Logger.debug "send_request #{url}"
         try do
-            case HTTPoison.request(method, url, body, headers, options) do
+            case HTTPoison.request(method, url, body, headers, options || []) do
                 {:ok, response} ->
                     {:ok, response}
                 {:error, %HTTPoison.Error{reason: reason}} ->
