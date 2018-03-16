@@ -118,7 +118,7 @@ defmodule GSS.Spreadsheet do
     @spec read_rows(pid, integer(), integer(), Keyword.t) :: {:ok, [spreadsheet_data]} | {:error, Exception.t}
     def read_rows(pid, row_index_start, row_index_end, options)
     when is_integer(row_index_start) and is_integer(row_index_end) and row_index_start < row_index_end do
-        GenServer.call(pid, {:read_rows, row_index_start, row_index_end, options})
+        GenServer.call(pid, {:read_rows, row_index_start, row_index_end, options}, 600000)
     end
     def read_rows(_, _, _, _), do: {:error, GSS.InvalidInput}
 
