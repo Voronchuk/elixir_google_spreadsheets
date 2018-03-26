@@ -186,13 +186,11 @@ defmodule GSS.Spreadsheet do
     Get total number of rows from spreadsheets.
     """
     def handle_call(:rows, _from, %{spreadsheet_id: spreadsheet_id} = state) do
-        query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{range(1, 1000, 1, 1)}"
+        query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}A1:B"
 
         case spreadsheet_query(:get, query) do
             {:json, %{"values" => values}} ->
                 {:reply, {:ok, length(values)}, state}
-            {:json, _} ->
-                {:reply, {:ok, 0}, state}
             {:error, exception} ->
                 {:reply, {:error, exception}, state}
         end
