@@ -69,7 +69,6 @@ defmodule GSS.Client do
     """
     @spec request(atom, binary, HTTPoison.body, HTTPoison.headers, Keyword.t) :: {:ok, HTTPoison.Response.t} | {:error, binary} | no_return
     def request(method, url, body \\ "", headers \\ [], options \\ []) do
-        result_timeout = options[:result_timeout] || config(:result_timeout)
         request = %RequestParams{
           method: method,
           url: url,
@@ -77,7 +76,12 @@ defmodule GSS.Client do
           headers: headers,
           options: options
         }
-        GenStage.call(__MODULE__, {:request, request}, result_timeout)
+        case options[:result_timeout] || config(:result_timeout) do
+          nil ->
+            GenStage.call(__MODULE__, {:request, request})
+          result_timeout ->
+            GenStage.call(__MODULE__, {:request, request}, result_timeout)
+        end
     end
 
     @doc ~S"""
@@ -122,7 +126,7 @@ defmodule GSS.Client do
         {:noreply, Enum.reverse(events), updated_queue}
     end
 
-    
+
     @doc """
     Read config settings scoped for GSS client.
     """

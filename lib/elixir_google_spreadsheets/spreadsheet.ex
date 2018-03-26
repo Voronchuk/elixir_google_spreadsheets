@@ -444,14 +444,14 @@ defmodule GSS.Spreadsheet do
     @spec spreadsheet_query(:get | :post, String.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
-        params = Client.config(:request_opts)
+        params = Client.config(:request_opts, [ssl: [{:versions, [:'tlsv1.2']}]])
         response = Client.request(type, @api_url_spreadsheet <> url_suffix, "", headers, params)
         spreadsheet_query_response(response)
     end
     @spec spreadsheet_query(:post | :put, String.t, spreadsheet_data, Keyword.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix, data, options) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
-        params = Client.config(:request_opts)
+        params = Client.config(:request_opts, [ssl: [{:versions, [:'tlsv1.2']}]])
         response = case type do
             :post ->
                 body = spreadsheet_query_body(data, options)
@@ -564,7 +564,7 @@ defmodule GSS.Spreadsheet do
     defp empty_row(nil, true), do: []
     defp empty_row(column_to, true), do: pad(column_to)
     defp empty_row(_, false), do: nil
-    
+
     @spec value_range_block_wrapper([String.t], integer()) :: [String.t]
     defp value_range_block_wrapper(values, column_to) when length(values) >= column_to, do: values
     defp value_range_block_wrapper(values, column_to) do
