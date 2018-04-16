@@ -72,6 +72,19 @@ defmodule GSS.SpreadsheetTest do
         assert result == [nil, @test_row1, nil]
     end
 
+    test "read batched for 3 rows more then 1000 from start", %{spreadsheet: pid} do
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1000, 1002, column_to: 5)
+        assert result == [nil, nil, nil]
+        :ok = GSS.Spreadsheet.write_row(pid, 1000, @test_row1)
+        :ok = GSS.Spreadsheet.write_row(pid, 1001, @test_row1)
+        :ok = GSS.Spreadsheet.write_row(pid, 1002, @test_row1)
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1000, 1002, column_to: 5, pad_empty: true)
+        assert result == [@test_row1, @test_row1, @test_row1]
+        GSS.Spreadsheet.clear_row(pid, 1000)
+        GSS.Spreadsheet.clear_row(pid, 1001)
+        GSS.Spreadsheet.clear_row(pid, 1002)
+    end
+
     test "clear batched for 2 rows", %{spreadsheet: pid} do
         :ok = GSS.Spreadsheet.write_row(pid, 1, @test_row1)
         :ok = GSS.Spreadsheet.write_row(pid, 2, @test_row1)

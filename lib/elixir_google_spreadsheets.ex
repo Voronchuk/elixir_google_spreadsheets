@@ -8,4 +8,12 @@ defmodule GSS do
     def start(_type, _args) do
         GSS.Supervisor.start_link()
     end
+
+    @doc """
+    Read config settings scoped for GSS.
+    """
+    @spec config(atom(), any()) :: any()
+    def config(key, default \\ nil) do
+        Application.get_env(:elixir_google_spreadsheets, key, default)
+    end
 end

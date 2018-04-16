@@ -30,7 +30,7 @@ use Mix.Config
 config :goth,
     json: "./config/service_account.json" |> File.read!
 
-config :elixir_google_spreadsheets, :spreadsheet,
+config :elixir_google_spreadsheets,
     max_rows_per_request: 301,
     default_column_from: 1,
     default_column_to: 26

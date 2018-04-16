@@ -20,9 +20,9 @@ defmodule GSS.Spreadsheet do
 
     @api_url_spreadsheet "https://sheets.googleapis.com/v4/spreadsheets/"
     @default_request_params [ssl: [{:versions, [:'tlsv1.2']}]]
-    @max_rows config(:max_rows_per_request, 301)
-    @default_column_from config(:default_column_from, 1)
-    @default_column_to config(:default_column_to, 26)
+    @max_rows GSS.config(:max_rows_per_request, 301)
+    @default_column_from GSS.config(:default_column_from, 1)
+    @default_column_to GSS.config(:default_column_to, 26)
     
 
     @spec start_link(String.t, Keyword.t) :: {:ok, pid}
@@ -33,15 +33,6 @@ defmodule GSS.Spreadsheet do
     @spec init({String.t, Keyword.t}) :: {:ok, state}
     def init({spreadsheet_id, opts}) do
         {:ok, %{spreadsheet_id: spreadsheet_id, list_name: Keyword.get(opts, :list_name)}}
-    end
-
-    @doc """
-    Read config settings scoped for GSS spreadsheet.
-    """
-    @spec config(atom(), any()) :: any()
-    def config(key, default \\ nil) do
-      Application.get_env(:elixir_google_spreadsheets, :spreadsheet)
-      |> Keyword.get(key, default)
     end
 
     @doc """
@@ -202,6 +193,8 @@ defmodule GSS.Spreadsheet do
         case spreadsheet_query(:get, query) do
             {:json, %{"values" => values}} ->
                 {:reply, {:ok, length(values)}, state}
+            {:json, _} ->
+                {:reply, {:ok, 0}, state}
             {:error, exception} ->
                 {:reply, {:error, exception}, state}
         end
