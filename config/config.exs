@@ -30,6 +30,10 @@ use Mix.Config
 config :goth,
     json: "./config/service_account.json" |> File.read!
 
+config :elixir_google_spreadsheets, :spreadsheet,
+    max_rows_per_request: 301,
+    default_column_from: 1,
+    default_column_to: 26
 config :elixir_google_spreadsheets, :client,
     request_workers: 50,
     max_demand: 100,
@@ -37,7 +41,6 @@ config :elixir_google_spreadsheets, :client,
     interval: 100,
     result_timeout: :timer.minutes(10),
     request_opts: [
-        ssl: [{:versions, [:'tlsv1.2']}],
         timeout: :timer.seconds(8),
         recv_timeout: :timer.seconds(5)
     ]

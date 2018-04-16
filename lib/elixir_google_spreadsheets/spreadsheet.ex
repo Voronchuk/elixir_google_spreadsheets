@@ -1,8 +1,6 @@
 defmodule GSS.Spreadsheet do
     @moduledoc """
     Model of Google Spreadsheet for external interaction.
-
-    Maximum size of the supported canvas is 1000 x 26 cells.
     """
 
     require Logger
@@ -21,7 +19,11 @@ defmodule GSS.Spreadsheet do
     @type spreadsheet_response :: {:json, map()} | {:error, Exception.t} | no_return()
 
     @api_url_spreadsheet "https://sheets.googleapis.com/v4/spreadsheets/"
-
+    @default_request_params [ssl: [{:versions, [:'tlsv1.2']}]]
+    @max_rows config(:max_rows_per_request, 301)
+    @default_column_from config(:default_column_from, 1)
+    @default_column_to config(:default_column_to, 26)
+    
 
     @spec start_link(String.t, Keyword.t) :: {:ok, pid}
     def start_link(spreadsheet_id, opts) do
@@ -31,6 +33,15 @@ defmodule GSS.Spreadsheet do
     @spec init({String.t, Keyword.t}) :: {:ok, state}
     def init({spreadsheet_id, opts}) do
         {:ok, %{spreadsheet_id: spreadsheet_id, list_name: Keyword.get(opts, :list_name)}}
+    end
+
+    @doc """
+    Read config settings scoped for GSS spreadsheet.
+    """
+    @spec config(atom(), any()) :: any()
+    def config(key, default \\ nil) do
+      Application.get_env(:elixir_google_spreadsheets, :spreadsheet)
+      |> Keyword.get(key, default)
     end
 
     @doc """
@@ -225,8 +236,8 @@ defmodule GSS.Spreadsheet do
         value_render_option = Keyword.get(options, :value_render_option, "FORMATTED_VALUE")
         datetime_render_option = Keyword.get(options, :datetime_render_option, "FORMATTED_STRING")
 
-        column_from = Keyword.get(options, :column_from, 1)
-        column_to = Keyword.get(options, :column_to, 26)
+        column_from = Keyword.get(options, :column_from, @default_column_from)
+        column_to = Keyword.get(options, :column_to, @default_column_to)
         range = range(row_index, row_index, column_from, column_to)
         query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{range}" <>
             "?majorDimension=#{major_dimension}&valueRenderOption=#{value_render_option}" <>
@@ -306,8 +317,8 @@ defmodule GSS.Spreadsheet do
         _from,
         %{spreadsheet_id: spreadsheet_id} = state
     ) do
-        column_from = Keyword.get(options, :column_from, 1)
-        column_to = Keyword.get(options, :column_to, 26)
+        column_from = Keyword.get(options, :column_from, @default_column_from)
+        column_to = Keyword.get(options, :column_to, @default_column_to)
         range = range(row_index, row_index, column_from, column_to)
         query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{range}:clear"
 
@@ -324,8 +335,8 @@ defmodule GSS.Spreadsheet do
     Get column value list for specific row from a spreadsheet.
     """
     def handle_call({:read_rows, [row | _] = rows, options}, from, state) when is_integer(row) do
-        column_from = Keyword.get(options, :column_from, 1)
-        column_to = Keyword.get(options, :column_to, 26)
+        column_from = Keyword.get(options, :column_from, @default_column_from)
+        column_to = Keyword.get(options, :column_to, @default_column_to)
         ranges = Enum.map rows, fn(row_index) ->
             range(row_index, row_index, column_from, column_to)
         end
@@ -358,8 +369,8 @@ defmodule GSS.Spreadsheet do
         end
     end
     def handle_call({:read_rows, row_index_start, row_index_end, options}, from, state) do
-        column_from = Keyword.get(options, :column_from, 1)
-        column_to = Keyword.get(options, :column_to, 26)
+        column_from = Keyword.get(options, :column_from, @default_column_from)
+        column_to = Keyword.get(options, :column_to, @default_column_to)
 
         options =
             if Keyword.get(options, :batch_range, false) do
@@ -399,8 +410,8 @@ defmodule GSS.Spreadsheet do
         end
     end
     def handle_call({:clear_rows, row_index_start, row_index_end, options}, from, state) do
-        column_from = Keyword.get(options, :column_from, 1)
-        column_to = Keyword.get(options, :column_to, 26)
+        column_from = Keyword.get(options, :column_from, @default_column_from)
+        column_to = Keyword.get(options, :column_to, @default_column_to)
         ranges = Enum.map row_index_start..row_index_end, fn(row_index) ->
             range(row_index, row_index, column_from, column_to)
         end
@@ -444,14 +455,14 @@ defmodule GSS.Spreadsheet do
     @spec spreadsheet_query(:get | :post, String.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
-        params = Client.config(:request_opts, [ssl: [{:versions, [:'tlsv1.2']}]])
+        params = get_request_params()
         response = Client.request(type, @api_url_spreadsheet <> url_suffix, "", headers, params)
         spreadsheet_query_response(response)
     end
     @spec spreadsheet_query(:post | :put, String.t, spreadsheet_data, Keyword.t) :: spreadsheet_response
     defp spreadsheet_query(type, url_suffix, data, options) when is_atom(type) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
-        params = Client.config(:request_opts, [ssl: [{:versions, [:'tlsv1.2']}]])
+        params = get_request_params()
         response = case type do
             :post ->
                 body = spreadsheet_query_body(data, options)
@@ -465,7 +476,7 @@ defmodule GSS.Spreadsheet do
     @spec spreadsheet_query_post_batch(String.t, map(), Keyword.t) :: spreadsheet_response
     defp spreadsheet_query_post_batch(url_suffix, request, _options) do
         headers = %{"Authorization" => "Bearer #{GSS.Registry.token}"}
-        params = Client.config(:request_opts)
+        params = get_request_params()
         body = Poison.encode!(request)
         response = Client.request(:post, @api_url_spreadsheet <> url_suffix, body, headers, params)
         spreadsheet_query_response(response)
@@ -473,9 +484,10 @@ defmodule GSS.Spreadsheet do
 
     @spec spreadsheet_query_response({:ok | :error, %HTTPoison.Response{}}) :: spreadsheet_response
     defp spreadsheet_query_response(response) do
-        with {:ok, %{status_code: 200, body: body}} <- response,
-             {:ok, json} <- Poison.decode(body) do
-             {:json, json}
+        with \
+            {:ok, %{status_code: 200, body: body}} <- response,
+            {:ok, json} <- Poison.decode(body) do
+            {:json, json}
         else
             {:error, reason}->
                 Logger.error fn -> "Spreadsheet query: #{inspect(reason)}" end
@@ -496,14 +508,14 @@ defmodule GSS.Spreadsheet do
 
     @spec range(integer(), integer(), integer(), integer()) :: String.t
     def range(row_from, row_to, column_from, column_to)
-    when row_from <= row_to and column_from <= column_to and row_to < 1001 do
+    when row_from <= row_to and column_from <= column_to and row_to - row_from < @max_rows do
         column_from_letters = col_number_to_letters(column_from)
         column_to_letters = col_number_to_letters(column_to)
         "#{column_from_letters}#{row_from}:#{column_to_letters}#{row_to}"
     end
     def range(_, _, _, _) do
         raise GSS.InvalidRange,
-            message: "Max rows 1000, `to` value should be greater than `from`"
+            message: "Max rows #{@max_rows}, `to` value should be greater than `from`"
     end
     @spec range(integer(), integer(), integer(), integer(), state) :: String.t
     def range(row_from, row_to, column_from, column_to, state) do
@@ -570,5 +582,11 @@ defmodule GSS.Spreadsheet do
     defp value_range_block_wrapper(values, column_to) do
         pad_amount = column_to - length(values)
         values ++ pad(pad_amount)
+    end
+
+    @spec get_request_params() :: Keyword.t
+    defp get_request_params do
+        @default_request_params
+        |> Keyword.merge(Client.config(:request_opts, []))
     end
 end

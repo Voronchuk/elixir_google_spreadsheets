@@ -70,5 +70,5 @@ Default values:
 * `insert_data_option = "INSERT_ROWS"`
 
 # Restrictions
-* Recommended columns __26__ (more on your own risk), max rows __1000__;
+* Recommended columns __26__ (more on your own risk), max rows in batch __300__;
 * __This library is in it's early beta, use on your own risk. Pull requests / reports / feedback are welcome.__
