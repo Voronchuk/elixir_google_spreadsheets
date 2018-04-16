@@ -37,5 +37,9 @@ defmodule GSS.SpreadsheetRangeTest do
         test "generates range for length 703" do
             assert GSS.Spreadsheet.range(1, 1, 1, 703) == "A1:AAA1"
         end
+
+        test "generates range for multiple rows" do
+            assert GSS.Spreadsheet.range(1, 10, 1, 10) == "A1:J10"
+        end
     end
 end

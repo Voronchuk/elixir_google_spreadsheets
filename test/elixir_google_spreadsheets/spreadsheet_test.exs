@@ -59,7 +59,7 @@ defmodule GSS.SpreadsheetTest do
     end
 
     test "read batched for 2 rows", %{spreadsheet: pid} do
-        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 2, column_to: 5)
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 2, column_to: 5, batch_range: true)
         assert result == [nil, nil]
         {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 2, column_to: 5, pad_empty: true)
         assert result == [["", "", "", "", ""], ["", "", "", "", ""]]
@@ -83,6 +83,11 @@ defmodule GSS.SpreadsheetTest do
         GSS.Spreadsheet.clear_row(pid, 1000)
         GSS.Spreadsheet.clear_row(pid, 1001)
         GSS.Spreadsheet.clear_row(pid, 1002)
+    end
+
+    test "read batched for 250 rows", %{spreadsheet: pid} do
+        {:ok, result} = GSS.Spreadsheet.read_rows(pid, 2, 250, column_to: 26, batch_range: true)
+        assert length(result) == 249
     end
 
     test "clear batched for 2 rows", %{spreadsheet: pid} do
