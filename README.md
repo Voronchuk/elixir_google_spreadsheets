@@ -61,14 +61,14 @@ Last function param of `GSS.Spreadsheet` function calls support the same `Keywor
 We also define `column_from` and `column_to` Keyword options which control range of cell which will be queried.
 
 Default values:
-* `column_from = 1`
-* `column_to = 26`
+* `column_from = 1` - default is configurable as `:default_column_from`
+* `column_to = 26` - default is configurable as `:default_column_to`
 * `major_dimension = "ROWS"`
 * `value_render_option = "FORMATTED_VALUE"`
 * `datetime_render_option = "FORMATTED_STRING"`
 * `value_render_option = "USER_ENTERED"`
 * `insert_data_option = "INSERT_ROWS"`
 
-# Restrictions
-* Recommended columns __26__ (more on your own risk), max rows in batch __300__;
+# Suggestions
+* Recommended columns __26__ (more on your own risk), max rows in a batch __100-300__ depending on your data size per row, configurable as `:max_rows_per_request`;
 * __This library is in it's early beta, use on your own risk. Pull requests / reports / feedback are welcome.__
