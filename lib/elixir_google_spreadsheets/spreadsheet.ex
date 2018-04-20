@@ -23,7 +23,6 @@ defmodule GSS.Spreadsheet do
     @max_rows GSS.config(:max_rows_per_request, 301)
     @default_column_from GSS.config(:default_column_from, 1)
     @default_column_to GSS.config(:default_column_to, 26)
-    
 
     @spec start_link(String.t, Keyword.t) :: {:ok, pid}
     def start_link(spreadsheet_id, opts) do
@@ -72,7 +71,7 @@ defmodule GSS.Spreadsheet do
     """
     @spec read_row(pid, integer(), Keyword.t) :: {:ok, spreadsheet_data} | {:error, Exception.t}
     def read_row(pid, row_index, options \\ []) do
-        GenServer.call(pid, {:read_row, row_index, options})
+      gen_server_call(pid, {:read_row, row_index, options}, options)
     end
 
     @doc """
@@ -80,7 +79,7 @@ defmodule GSS.Spreadsheet do
     """
     @spec write_row(pid, integer(), spreadsheet_data, Keyword.t) :: :ok
     def write_row(pid, row_index, column_list, options \\ []) when is_list(column_list) do
-        GenServer.call(pid, {:write_row, row_index, column_list, options})
+      gen_server_call(pid, {:write_row, row_index, column_list, options}, options)
     end
 
     @doc """
@@ -88,7 +87,7 @@ defmodule GSS.Spreadsheet do
     """
     @spec append_row(pid, integer(), spreadsheet_data, Keyword.t) :: :ok
     def append_row(pid, row_index, column_list, options \\ []) when is_list(column_list) do
-        GenServer.call(pid, {:append_row, row_index, column_list, options})
+      gen_server_call(pid, {:append_row, row_index, column_list, options}, options)
     end
 
     @doc """
@@ -96,11 +95,11 @@ defmodule GSS.Spreadsheet do
     """
     @spec clear_row(pid, integer(), Keyword.t) :: :ok
     def clear_row(pid, row_index, options \\ []) do
-        GenServer.call(pid, {:clear_row, row_index, options})
+      gen_server_call(pid, {:clear_row, row_index, options}, options)
     end
 
     @doc """
-    Batched read, which returns more then one record.
+    Batched read, which returns more than one record.
     Pass either an array of ranges (or rows), or start and end row indexes.
 
     By default it returns `nils` for an empty rows,
@@ -111,7 +110,7 @@ defmodule GSS.Spreadsheet do
     def read_rows(pid, ranges), do: read_rows(pid, ranges, [])
     @spec read_rows(pid, [String.t] | [integer()], Keyword.t) :: {:ok, [spreadsheet_data]} | {:error, Exception.t}
     def read_rows(pid, ranges, options) when is_list(ranges) do
-        GenServer.call(pid, {:read_rows, ranges, options})
+      gen_server_call(pid, {:read_rows, ranges, options}, options)
     end
     @spec read_rows(pid, integer(), integer()) :: {:ok, [spreadsheet_data]} | {:error, Exception.t}
     def read_rows(pid, row_index_start, row_index_end)
@@ -120,7 +119,7 @@ defmodule GSS.Spreadsheet do
     @spec read_rows(pid, integer(), integer(), Keyword.t) :: {:ok, [spreadsheet_data]} | {:error, Exception.t}
     def read_rows(pid, row_index_start, row_index_end, options)
     when is_integer(row_index_start) and is_integer(row_index_end) and row_index_start < row_index_end do
-        GenServer.call(pid, {:read_rows, row_index_start, row_index_end, options})
+      gen_server_call(pid, {:read_rows, row_index_start, row_index_end, options}, options)
     end
     def read_rows(_, _, _, _), do: {:error, GSS.InvalidInput}
 
@@ -132,7 +131,7 @@ defmodule GSS.Spreadsheet do
     def clear_rows(pid, ranges), do: clear_rows(pid, ranges, [])
     @spec clear_rows(pid, [String.t], Keyword.t) :: :ok | {:error, Exception.t}
     def clear_rows(pid, ranges, options) when is_list(ranges) do
-        GenServer.call(pid, {:clear_rows, ranges, options})
+      gen_server_call(pid, {:clear_rows, ranges, options}, options)
     end
     @spec clear_rows(pid, integer(), integer()) :: :ok | {:error, Exception.t}
     def clear_rows(pid, row_index_start, row_index_end)
@@ -141,7 +140,7 @@ defmodule GSS.Spreadsheet do
     @spec clear_rows(pid, integer(), integer(), Keyword.t) :: :ok | {:error, Exception.t}
     def clear_rows(pid, row_index_start, row_index_end, options)
     when is_integer(row_index_start) and is_integer(row_index_end) and row_index_start < row_index_end do
-        GenServer.call(pid, {:clear_rows, row_index_start, row_index_end, options})
+      gen_server_call(pid, {:clear_rows, row_index_start, row_index_end, options}, options)
     end
     def clear_rows(_, _, _, _), do: {:error, GSS.InvalidInput}
 
@@ -157,7 +156,7 @@ defmodule GSS.Spreadsheet do
     @spec write_rows(pid, [String.t], [spreadsheet_data], Keyword.t) :: :ok
     def write_rows(pid, ranges, data, options)
     when is_list(data) and is_list(ranges) and length(data) == length(ranges) do
-        GenServer.call(pid, {:write_rows, ranges, data, options})
+      gen_server_call(pid, {:write_rows, ranges, data, options}, options)
     end
     def write_rows(_, _, _, _), do: {:error, GSS.InvalidInput}
 
@@ -167,7 +166,7 @@ defmodule GSS.Spreadsheet do
     Used mainly for testing purposes.
     """
     def handle_call(:id, _from, %{spreadsheet_id: spreadsheet_id} = state) do
-        {:reply, spreadsheet_id, state}
+      {:reply, spreadsheet_id, state}
     end
 
     @doc """
@@ -582,4 +581,13 @@ defmodule GSS.Spreadsheet do
         @default_request_params
         |> Keyword.merge(Client.config(:request_opts, []))
     end
+
+  defp gen_server_call(pid, tuple, options) do
+    case Keyword.get(options, :timeout) do
+      nil ->
+        GenServer.call(pid, tuple)
+      timeout ->
+        GenServer.call(pid, tuple, timeout)
+    end
+  end
 end
