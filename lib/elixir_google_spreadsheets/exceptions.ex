@@ -7,7 +7,7 @@ end
 
 defmodule GSS.InvalidColumnIndex do
     @moduledoc """
-    Raised in case more then 255 columns is queried.
+    Raised in case more than 255 columns is queried.
     """
     defexception [:message]
 end
