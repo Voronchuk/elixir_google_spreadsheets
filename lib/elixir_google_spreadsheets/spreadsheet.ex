@@ -481,6 +481,9 @@ defmodule GSS.Spreadsheet do
             {:ok, json} <- Poison.decode(body) do
             {:json, json}
         else
+            {:ok, %{status_code: status_code, body: body}} when status_code != 200 ->
+                Logger.error "Google API returned status code: #{status_code}. Body: #{body}"
+                {:error, GSS.GoogleApiError}
             {:error, reason}->
                 Logger.error fn -> "Spreadsheet query: #{inspect(reason)}" end
                 {:error, GSS.GoogleApiError}
