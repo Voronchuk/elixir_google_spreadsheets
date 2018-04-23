@@ -16,7 +16,7 @@ defmodule GSS.Spreadsheet do
     """
     @type state :: map()
     @type spreadsheet_data :: [String.t]
-    @type spreadsheet_response :: {:json, map()} | {:error, Exception.t} | no_return()
+    @type spreadsheet_response :: {:json, map()} | {:error, atom} | no_return()
 
     @api_url_spreadsheet "https://sheets.googleapis.com/v4/spreadsheets/"
     @default_request_params [ssl: [{:versions, [:'tlsv1.2']}]]
