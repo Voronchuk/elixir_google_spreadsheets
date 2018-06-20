@@ -6,8 +6,6 @@ defmodule GSS.Client.Supervisor do
     use Supervisor
     alias GSS.{Client, Client.Limiter, Client.Request}
 
-    @config Application.fetch_env!(:elixir_google_spreadsheets, :client)
-
     @spec start_link() :: {:ok, pid}
     def start_link do
        Supervisor.start_link(__MODULE__, [],  name: __MODULE__)
@@ -15,7 +13,8 @@ defmodule GSS.Client.Supervisor do
 
     @spec init([]) :: {:ok, {:supervisor.sup_flags(), [Supervisor.Spec.spec()]}} | :ignore
     def init([]) do
-        limiter_args = Keyword.take(@config, [:max_demand, :interval, :max_interval])
+        config = Application.fetch_env!(:elixir_google_spreadsheets, :client)
+        limiter_args = Keyword.take(config, [:max_demand, :interval, :max_interval])
 
         children = [
             worker(Client, []),
@@ -33,7 +32,7 @@ defmodule GSS.Client.Supervisor do
         ]
 
         request_workers =
-            for num <- 1..Keyword.get(@config, :request_workers, 10),
+            for num <- 1..Keyword.get(config, :request_workers, 10),
             {limiter, name} <- [{Limiter.Writer, Request.Write}, {Limiter.Reader, Request.Read}]
             do
                 name = :"#{name}#{num}"
