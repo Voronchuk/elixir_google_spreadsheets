@@ -385,7 +385,7 @@ defmodule GSS.Spreadsheet do
         column_to = Keyword.get(options, :column_to, @default_column_to)
 
         options =
-            if Keyword.get(options, :batch_range, false) do
+            if Keyword.get(options, :batch_range, true) do
                 batched_range = range(row_index_start, row_index_end, column_from, column_to)
                 options
                 |> Keyword.put(:batched_ranges, [batched_range])
