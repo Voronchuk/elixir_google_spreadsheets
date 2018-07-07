@@ -51,6 +51,26 @@ defmodule GSS.Spreadsheet do
     end
 
     @doc """
+    Get spreadsheet sheets from properties.
+    """
+    @spec sheets(pid, Keyword.t) :: [map()] | map()
+    def sheets(pid, opts \\ []) do
+        with \
+            {:ok, %{"sheets" => sheets}} <- GenServer.call(pid, :properties),
+            {:is_raw_response?, false, _} <- {:is_raw_response?, Keyword.get(opts, :raw, false), sheets}
+        do
+            Enum.reduce sheets, %{}, fn(%{"properties" => %{"title" => title} = properties}, acc) ->
+                Map.put(acc, title, properties)
+            end
+        else
+            {:is_raw_response?, false, sheets} ->
+                sheets
+            _ ->
+                []
+        end
+    end
+
+    @doc """
     Get total amount of rows in a spreadsheet.
     """
     @spec rows(pid) :: {:ok, integer()} | {:error, Exception.t}

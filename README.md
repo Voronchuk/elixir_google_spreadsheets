@@ -44,6 +44,8 @@ Or if you wish to edit only a specific list:
 Sample operations:
 
 * `GSS.Spreadsheet.id(pid)`
+* `GSS.Spreadsheet.properties(pid)`
+* `GSS.Spreadsheet.sheets(pid)`
 * `GSS.Spreadsheet.rows(pid)`
 * `GSS.Spreadsheet.read_row(pid, 1, column_to: 5)`
 * `GSS.Spreadsheet.read_rows(pid, 1, 10, column_to: 5, pad_empty: true)`

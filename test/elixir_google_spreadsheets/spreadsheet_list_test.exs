@@ -27,6 +27,8 @@ defmodule GSS.SpreadsheetListTest do
     test "initialize new spreadsheet list process", %{spreadsheet: pid} do
         assert GSS.Registry.spreadsheet_pid(@test_spreadsheet_id, list_name: @test_list) == pid
         assert GSS.Spreadsheet.id(pid) == @test_spreadsheet_id
+        sheets = GSS.Spreadsheet.sheets(pid)
+        assert Map.get(sheets, @test_list)
     end
 
     test "read total number of filled rows in list", %{spreadsheet: pid} do
@@ -84,5 +86,12 @@ defmodule GSS.SpreadsheetListTest do
         {:ok, _} = GSS.Spreadsheet.write_rows(pid, ["A2:E2", "A3:F3"], [@test_row1, @test_row2])
         {:ok, result} = GSS.Spreadsheet.read_rows(pid, 2, 3, column_to: 6)
         assert result == [@test_row1 ++ [""], @test_row2]
+    end
+
+    test "unexisting lists should gracefully fail", %{spreadsheet: pid} do
+        {:ok, pid} = GSS.Spreadsheet.Supervisor.spreadsheet(@test_spreadsheet_id, name: :unknown_list, list_name: "unknown")
+        sheets = GSS.Spreadsheet.sheets(pid)
+        refute Map.get(sheets, "unknown")
+        assert {:error, _} = GSS.Spreadsheet.read_rows(pid, 2, 3, column_to: 6)
     end
 end
