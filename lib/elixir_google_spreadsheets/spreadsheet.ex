@@ -16,7 +16,7 @@ defmodule GSS.Spreadsheet do
     """
     @type state :: map()
     @type spreadsheet_data :: [String.t]
-    @type spreadsheet_response :: {:json, map()} | {:error, atom} | no_return()
+    @type spreadsheet_response :: {:json, map()} | {:error, Exception.t} | no_return()
 
     @api_url_spreadsheet "https://sheets.googleapis.com/v4/spreadsheets/"
     @default_request_params [ssl: [{:versions, [:'tlsv1.2']}]]
@@ -106,22 +106,22 @@ defmodule GSS.Spreadsheet do
     use `pad_empty: true` and `column_to: integer` options to fill records
     with an empty string values.
     """
-    @spec read_rows(pid, [String.t] | [integer()]) :: {:ok, [spreadsheet_data | nil]} | {:error, atom}
+    @spec read_rows(pid, [String.t] | [integer()]) :: {:ok, [spreadsheet_data | nil]} | {:error, Exception.t}
     def read_rows(pid, ranges), do: read_rows(pid, ranges, [])
-    @spec read_rows(pid, [String.t] | [integer()], Keyword.t) :: {:ok, [spreadsheet_data]} | {:error, atom}
+    @spec read_rows(pid, [String.t] | [integer()], Keyword.t) :: {:ok, [spreadsheet_data]} | {:error, Exception.t}
     def read_rows(pid, ranges, options) when is_list(ranges) do
       gen_server_call(pid, {:read_rows, ranges, options}, options)
     end
     @spec read_rows(pid, integer(), integer()) :: {:ok, [spreadsheet_data]} | {:error, atom}
     def read_rows(pid, row_index_start, row_index_end)
     when is_integer(row_index_start) and is_integer(row_index_end), do: read_rows(pid, row_index_start, row_index_end, [])
-    def read_rows(_, _, _), do: {:error, GSS.InvalidInput}
+    def read_rows(_, _, _), do: {:error, %GSS.InvalidInput{message: "invalid start or end row index"}}
     @spec read_rows(pid, integer(), integer(), Keyword.t) :: {:ok, [spreadsheet_data]} | {:error, atom}
     def read_rows(pid, row_index_start, row_index_end, options)
     when is_integer(row_index_start) and is_integer(row_index_end) and row_index_start < row_index_end do
       gen_server_call(pid, {:read_rows, row_index_start, row_index_end, options}, options)
     end
-    def read_rows(_, _, _, _), do: {:error, GSS.InvalidInput}
+    def read_rows(_, _, _, _), do: {:error, %GSS.InvalidInput{message: "invalid start or end row index"}}
 
     @doc """
     Batched clear, which deletes more then one record.
@@ -136,13 +136,13 @@ defmodule GSS.Spreadsheet do
     @spec clear_rows(pid, integer(), integer()) :: :ok | {:error, Exception.t}
     def clear_rows(pid, row_index_start, row_index_end)
     when is_integer(row_index_start) and is_integer(row_index_end), do: clear_rows(pid, row_index_start, row_index_end, [])
-    def clear_rows(_, _, _), do: {:error, GSS.InvalidInput}
+    def clear_rows(_, _, _), do: {:error, %GSS.InvalidInput{message: "invalid start or end row index"}}
     @spec clear_rows(pid, integer(), integer(), Keyword.t) :: :ok | {:error, Exception.t}
     def clear_rows(pid, row_index_start, row_index_end, options)
     when is_integer(row_index_start) and is_integer(row_index_end) and row_index_start < row_index_end do
       gen_server_call(pid, {:clear_rows, row_index_start, row_index_end, options}, options)
     end
-    def clear_rows(_, _, _, _), do: {:error, GSS.InvalidInput}
+    def clear_rows(_, _, _, _), do: {:error, %GSS.InvalidInput{message: "invalid start or end row index"}}
 
     @doc """
     Batch update to write multiple rows.
@@ -158,7 +158,7 @@ defmodule GSS.Spreadsheet do
     when is_list(data) and is_list(ranges) and length(data) == length(ranges) do
       gen_server_call(pid, {:write_rows, ranges, data, options}, options)
     end
-    def write_rows(_, _, _, _), do: {:error, GSS.InvalidInput}
+    def write_rows(_, _, _, _), do: {:error, %GSS.InvalidInput{message: "invalid ranges or data, length of ranges and data lists should be the same"}}
 
 
     @doc """
@@ -483,10 +483,10 @@ defmodule GSS.Spreadsheet do
         else
             {:ok, %{status_code: status_code, body: body}} when status_code != 200 ->
                 Logger.error "Google API returned status code: #{status_code}. Body: #{body}"
-                {:error, GSS.GoogleApiError}
+                {:error, %GSS.GoogleApiError{message: "invalid google API status code #{status_code}"}}
             {:error, reason}->
                 Logger.error fn -> "Spreadsheet query: #{inspect(reason)}" end
-                {:error, GSS.GoogleApiError}
+                {:error, %GSS.GoogleApiError{message: "invalid google API response #{inspect(reason)}"}}
         end
     end
 
