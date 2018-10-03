@@ -1,28 +1,28 @@
 defmodule GSS.Spreadsheet.Supervisor do
-    @moduledoc """
-    Supervisor to keep track of initialized spreadsheet processes.
-    """
+  @moduledoc """
+  Supervisor to keep track of initialized spreadsheet processes.
+  """
 
-    use Supervisor
+  use Supervisor
 
-    @spec start_link() :: {:ok, pid}
-    def start_link do
-        Supervisor.start_link(__MODULE__, [], name: __MODULE__)
-    end
+  @spec start_link() :: {:ok, pid}
+  def start_link do
+    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
+  end
 
-    @spec spreadsheet(String.t, Keyword.t) :: {:ok, pid}
-    def spreadsheet(spreadsheet_id, opts \\ []) do
-        {:ok, pid} = Supervisor.start_child(__MODULE__, [spreadsheet_id, opts])
-        :ok = GSS.Registry.new_spreadsheet(spreadsheet_id, pid, opts)
-        {:ok, pid}
-    end
+  @spec spreadsheet(String.t(), Keyword.t()) :: {:ok, pid}
+  def spreadsheet(spreadsheet_id, opts \\ []) do
+    {:ok, pid} = Supervisor.start_child(__MODULE__, [spreadsheet_id, opts])
+    :ok = GSS.Registry.new_spreadsheet(spreadsheet_id, pid, opts)
+    {:ok, pid}
+  end
 
-    @spec init([]) :: {:ok, {:supervisor.sup_flags(), [Supervisor.Spec.spec()]}} | :ignore
-    def init([]) do
-        children = [
-            worker(GSS.Spreadsheet, [], restart: :transient)
-        ]
+  @spec init([]) :: {:ok, {:supervisor.sup_flags(), [Supervisor.Spec.spec()]}} | :ignore
+  def init([]) do
+    children = [
+      worker(GSS.Spreadsheet, [], restart: :transient)
+    ]
 
-        supervise(children, strategy: :simple_one_for_one)
-    end
+    supervise(children, strategy: :simple_one_for_one)
+  end
 end
