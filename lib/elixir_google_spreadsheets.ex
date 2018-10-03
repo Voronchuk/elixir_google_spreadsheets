@@ -1,19 +1,19 @@
 defmodule GSS do
-    @moduledoc """
-    Bootstrap Google Spreadsheet application.
-    """
+  @moduledoc """
+  Bootstrap Google Spreadsheet application.
+  """
 
-    use Application
+  use Application
 
-    def start(_type, _args) do
-        GSS.Supervisor.start_link()
-    end
+  def start(_type, _args) do
+    GSS.Supervisor.start_link()
+  end
 
-    @doc """
-    Read config settings scoped for GSS.
-    """
-    @spec config(atom(), any()) :: any()
-    def config(key, default \\ nil) do
-        Application.get_env(:elixir_google_spreadsheets, key, default)
-    end
+  @doc """
+  Read config settings scoped for GSS.
+  """
+  @spec config(atom(), any()) :: any()
+  def config(key, default \\ nil) do
+    Application.get_env(:elixir_google_spreadsheets, key, default)
+  end
 end
