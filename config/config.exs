@@ -28,21 +28,22 @@ use Mix.Config
 # here (which is why it is important to import them last).
 #
 config :goth,
-    json: "./config/service_account.json" |> File.read!
+  json: "./config/service_account.json" |> File.read!()
 
 config :elixir_google_spreadsheets,
-    max_rows_per_request: 301,
-    default_column_from: 1,
-    default_column_to: 26
+  max_rows_per_request: 301,
+  default_column_from: 1,
+  default_column_to: 26
+
 config :elixir_google_spreadsheets, :client,
-    request_workers: 50,
-    max_demand: 100,
-    max_interval: :timer.minutes(1),
-    interval: 100,
-    result_timeout: :timer.minutes(10),
-    request_opts: [
-        timeout: :timer.seconds(8),
-        recv_timeout: :timer.seconds(5)
-    ]
-  
-import_config "#{Mix.env}.exs"
+  request_workers: 50,
+  max_demand: 100,
+  max_interval: :timer.minutes(1),
+  interval: 100,
+  result_timeout: :timer.minutes(10),
+  request_opts: [
+    timeout: :timer.seconds(8),
+    recv_timeout: :timer.seconds(5)
+  ]
+
+import_config "#{Mix.env()}.exs"

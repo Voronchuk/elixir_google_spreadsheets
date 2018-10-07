@@ -4,3 +4,4 @@ config/service_account.json
 doc
 config/*.local.exs
 .editorconfig
+.elixir_ls
