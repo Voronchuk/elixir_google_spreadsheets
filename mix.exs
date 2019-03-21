@@ -46,7 +46,7 @@ defmodule GSS.Mixfile do
       {:gen_stage, "~> 0.14"},
       {:poison, "~> 3.1"},
       {:earmark, ">= 0.0.0", only: :dev},
-      {:ex_doc, ">= 0.0.0", only: :dev},
+      {:ex_doc, "~> 0.19", only: :dev},
       {:logger_file_backend, ">= 0.0.10", only: [:dev, :test]},
       {:dialyxir, "~> 0.5", only: :dev, runtime: false}
     ]

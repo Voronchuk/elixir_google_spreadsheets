@@ -86,21 +86,21 @@ defmodule GSS.Client.Limiter do
     {:noreply, events, state}
   end
 
-  @doc ~S"""
+  @doc """
   Gives events for the next stage to process when requested
   """
   def handle_demand(demand, state) when demand > 0 do
     {:noreply, [], state}
   end
 
-  @doc ~S"""
+  @doc """
   Ask new events if needed
   """
   def handle_info(:ask, state) do
     {:noreply, [], ask_and_schedule(state)}
   end
 
-  @doc ~S"""
+  @doc """
   Check to reach limit.
 
   If limit not reached ask again after `:interval` timeout,
