@@ -4,8 +4,8 @@ defmodule GSS.Mixfile do
   def project do
     [
       app: :elixir_google_spreadsheets,
-      version: "0.1.10",
-      elixir: "~> 1.4",
+      version: "0.1.11",
+      elixir: "~> 1.5",
       description: "Elixir library to read and write data of Google Spreadsheets.",
       docs: [extras: ["README.md"]],
       build_embedded: Mix.env() == :prod,
@@ -41,9 +41,9 @@ defmodule GSS.Mixfile do
 
   defp deps do
     [
-      {:goth, ">= 0.5.0"},
-      {:httpoison, ">= 0.12.0"},
-      {:gen_stage, ">= 0.12.0"},
+      {:goth, "~> 0.8.0"},
+      {:httpoison, "~> 1.4"},
+      {:gen_stage, "~> 0.14"},
       {:poison, "~> 3.1"},
       {:earmark, ">= 0.0.0", only: :dev},
       {:ex_doc, ">= 0.0.0", only: :dev},
