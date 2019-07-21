@@ -106,8 +106,8 @@ defmodule GSS.Spreadsheet do
   Append row in a spreadsheet after an index.
   """
   @spec append_row(pid, integer(), spreadsheet_data, Keyword.t()) :: :ok
-  def append_row(pid, row_index, column_list, options \\ []) when is_list(column_list) do
-    gen_server_call(pid, {:append_row, row_index, column_list, options}, options)
+  def append_row(pid, row_index, [cell | _] = column_list, options \\ []) when is_binary(cell) do
+    gen_server_call(pid, {:append_rows, row_index, [column_list], options}, options)
   end
 
   @doc """
@@ -191,9 +191,9 @@ defmodule GSS.Spreadsheet do
   amound of records in data and same amount of columns
   as entries in data record.
   """
-  @spec write_rows(pid, [String.t()], [spreadsheet_data]) :: {:ok, any()}
-  def write_rows(pid, ranges, data), do: write_rows(pid, ranges, data, [])
-  @spec write_rows(pid, [String.t()], [spreadsheet_data], Keyword.t()) :: :ok
+  @spec write_rows(pid, [String.t()], [spreadsheet_data], Keyword.t()) :: :ok | {:error, Exception.t()}
+  def write_rows(pid, ranges, data, opts \\ [])
+
   def write_rows(pid, ranges, data, options)
       when is_list(data) and is_list(ranges) and length(data) == length(ranges) do
     gen_server_call(pid, {:write_rows, ranges, data, options}, options)
@@ -205,6 +205,15 @@ defmodule GSS.Spreadsheet do
        %GSS.InvalidInput{
          message: "invalid ranges or data, length of ranges and data lists should be the same"
        }}
+
+  @doc """
+  Batch update to append multiple rows.
+  """
+  @spec append_rows(pid, integer(), [spreadsheet_data], Keyword.t()) :: :ok | {:error, Exception.t()}
+  def append_rows(pid, row_index, [[cell | _] | _] = data, options \\ [])
+      when is_binary(cell) and row_index > 0 do
+    gen_server_call(pid, {:append_rows, row_index, data, options}, options)
+  end
 
   @doc """
   Get shreadsheet id stored in this state.
@@ -332,31 +341,32 @@ defmodule GSS.Spreadsheet do
   Insert row under some other row and write the column_list content there.
   """
   def handle_call(
-        {:append_row, row_index, column_list, options},
+        {:append_rows, row_index, column_lists, options},
         _from,
         %{spreadsheet_id: spreadsheet_id} = state
       ) do
     value_input_option = Keyword.get(options, :value_input_option, "USER_ENTERED")
     insert_data_option = Keyword.get(options, :insert_data_option, "INSERT_ROWS")
 
-    write_cells_count = length(column_list)
+    write_cells_count = Enum.map(column_lists, &Kernel.length/1) |> Enum.max()
+    row_max_index = length(column_lists)
     column_from = Keyword.get(options, :column_from, 1)
     column_to = Keyword.get(options, :column_to, column_from + write_cells_count - 1)
-    range = range(row_index, row_index, column_from, column_to, state)
+    range = range(row_index, row_max_index, column_from, column_to, state)
 
     query =
       "#{spreadsheet_id}/values/#{range}:append" <>
         "?valueInputOption=#{value_input_option}&insertDataOption=#{insert_data_option}"
 
-    case spreadsheet_query(:post, query, column_list, options ++ [range: range]) do
+    case spreadsheet_query(:post, query, column_lists, options ++ [range: range, wrap_data: false]) do
       {:json,
-       %{
-         "updates" => %{
-           "updatedRows" => 1,
-           "updatedColumns" => updated_columns
-         }
-       }}
-      when updated_columns > 0 ->
+        %{
+          "updates" => %{
+            "updatedRows" => updated_rows,
+            "updatedColumns" => updated_columns
+          }
+        }}
+      when updated_columns > 0 and updated_rows === row_max_index ->
         {:reply, :ok, state}
 
       {:error, exception} ->
@@ -585,11 +595,12 @@ defmodule GSS.Spreadsheet do
   defp spreadsheet_query_body(data, options) do
     range = Keyword.fetch!(options, :range)
     major_dimension = Keyword.get(options, :major_dimension, "ROWS")
+    wrap_data = Keyword.get(options, :wrap_data, true)
 
     Poison.encode!(%{
       range: range,
       majorDimension: major_dimension,
-      values: [data]
+      values: (if wrap_data, do: [data], else: data)
     })
   end
 
