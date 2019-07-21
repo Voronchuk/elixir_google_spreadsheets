@@ -5,6 +5,7 @@ defmodule GSS.SpreadsheetTest do
   @test_row1 ["1", "2", "3", "4", "5"]
   @test_row2 ["6", "1", "2", "3", "4", "0"]
   @test_row3 ["7", "7", "8"]
+  @test_row4 ["1", "4", "8", "4"]
 
   setup context do
     {:ok, pid} = GSS.Spreadsheet.Supervisor.spreadsheet(@test_spreadsheet_id, name: context.test)
@@ -55,6 +56,18 @@ defmodule GSS.SpreadsheetTest do
     :ok = GSS.Spreadsheet.append_row(pid, 1, @test_row3)
     {:ok, result} = GSS.Spreadsheet.read_row(pid, 3, column_to: 3)
     assert result == @test_row3
+    {:ok, result} = GSS.Spreadsheet.read_row(pid, 2, column_to: 6)
+    assert result == @test_row2
+  end
+
+  test "write some lines and append two rows between them", %{spreadsheet: pid} do
+    :ok = GSS.Spreadsheet.write_row(pid, 1, @test_row1)
+    :ok = GSS.Spreadsheet.write_row(pid, 2, @test_row2)
+    :ok = GSS.Spreadsheet.append_rows(pid, 1, [@test_row3, @test_row4])
+    {:ok, result} = GSS.Spreadsheet.read_row(pid, 3, column_to: 3)
+    assert result == @test_row3
+    {:ok, result} = GSS.Spreadsheet.read_row(pid, 4, column_to: 4)
+    assert result == @test_row4
     {:ok, result} = GSS.Spreadsheet.read_row(pid, 2, column_to: 6)
     assert result == @test_row2
   end
