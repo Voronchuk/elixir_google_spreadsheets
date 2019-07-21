@@ -351,7 +351,8 @@ defmodule GSS.Spreadsheet do
     insert_data_option = Keyword.get(options, :insert_data_option, "INSERT_ROWS")
 
     write_cells_count = Enum.map(column_lists, &Kernel.length/1) |> Enum.max()
-    row_max_index = length(column_lists)
+    row_count = length(column_lists)
+    row_max_index = row_index + row_count - 1
     column_from = Keyword.get(options, :column_from, 1)
     column_to = Keyword.get(options, :column_to, column_from + write_cells_count - 1)
     range = range(row_index, row_max_index, column_from, column_to, state)
@@ -373,7 +374,7 @@ defmodule GSS.Spreadsheet do
            "updatedColumns" => updated_columns
          }
        }}
-      when updated_columns > 0 and updated_rows === row_max_index ->
+      when updated_columns > 0 and updated_rows === row_count ->
         {:reply, :ok, state}
 
       {:error, exception} ->
