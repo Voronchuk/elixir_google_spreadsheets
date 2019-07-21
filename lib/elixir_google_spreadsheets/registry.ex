@@ -53,7 +53,7 @@ defmodule GSS.Registry do
   @doc """
   Fetch Google Spreadsheet proccess by it's id in the registry.
   """
-  @spec spreadsheet_pid(String.t(), Keyword.t()) :: pid
+  @spec spreadsheet_pid(String.t(), Keyword.t()) :: pid | nil
   def spreadsheet_pid(spreadsheet_id, opts \\ []) do
     GenServer.call(__MODULE__, {:spreadsheet_pid, spreadsheet_id, opts})
   end
