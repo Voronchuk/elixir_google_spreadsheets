@@ -191,7 +191,8 @@ defmodule GSS.Spreadsheet do
   amound of records in data and same amount of columns
   as entries in data record.
   """
-  @spec write_rows(pid, [String.t()], [spreadsheet_data], Keyword.t()) :: :ok | {:error, Exception.t()}
+  @spec write_rows(pid, [String.t()], [spreadsheet_data], Keyword.t()) ::
+          :ok | {:error, Exception.t()}
   def write_rows(pid, ranges, data, opts \\ [])
 
   def write_rows(pid, ranges, data, options)
@@ -209,7 +210,8 @@ defmodule GSS.Spreadsheet do
   @doc """
   Batch update to append multiple rows.
   """
-  @spec append_rows(pid, integer(), [spreadsheet_data], Keyword.t()) :: :ok | {:error, Exception.t()}
+  @spec append_rows(pid, integer(), [spreadsheet_data], Keyword.t()) ::
+          :ok | {:error, Exception.t()}
   def append_rows(pid, row_index, [[cell | _] | _] = data, options \\ [])
       when is_binary(cell) and row_index > 0 do
     gen_server_call(pid, {:append_rows, row_index, data, options}, options)
@@ -358,14 +360,19 @@ defmodule GSS.Spreadsheet do
       "#{spreadsheet_id}/values/#{range}:append" <>
         "?valueInputOption=#{value_input_option}&insertDataOption=#{insert_data_option}"
 
-    case spreadsheet_query(:post, query, column_lists, options ++ [range: range, wrap_data: false]) do
+    case spreadsheet_query(
+           :post,
+           query,
+           column_lists,
+           options ++ [range: range, wrap_data: false]
+         ) do
       {:json,
-        %{
-          "updates" => %{
-            "updatedRows" => updated_rows,
-            "updatedColumns" => updated_columns
-          }
-        }}
+       %{
+         "updates" => %{
+           "updatedRows" => updated_rows,
+           "updatedColumns" => updated_columns
+         }
+       }}
       when updated_columns > 0 and updated_rows === row_max_index ->
         {:reply, :ok, state}
 
@@ -600,7 +607,7 @@ defmodule GSS.Spreadsheet do
     Poison.encode!(%{
       range: range,
       majorDimension: major_dimension,
-      values: (if wrap_data, do: [data], else: data)
+      values: if(wrap_data, do: [data], else: data)
     })
   end
 
