@@ -212,8 +212,8 @@ defmodule GSS.Spreadsheet do
   """
   @spec append_rows(pid, integer(), [spreadsheet_data], Keyword.t()) ::
           :ok | {:error, Exception.t()}
-  def append_rows(pid, row_index, [[cell | _] | _] = data, options \\ [])
-      when is_binary(cell) and row_index > 0 do
+  def append_rows(pid, row_index, [[_ | _] | _] = data, options \\ [])
+      when row_index > 0 do
     gen_server_call(pid, {:append_rows, row_index, data, options}, options)
   end
 
