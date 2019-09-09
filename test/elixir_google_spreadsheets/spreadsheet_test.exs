@@ -24,6 +24,7 @@ defmodule GSS.SpreadsheetTest do
     GSS.Spreadsheet.clear_row(pid, 2)
     GSS.Spreadsheet.clear_row(pid, 3)
     GSS.Spreadsheet.clear_row(pid, 4)
+    GSS.Spreadsheet.clear_row(pid, 5)
   end
 
   test "initialize new spreadsheet process", %{spreadsheet: pid} do
@@ -63,10 +64,12 @@ defmodule GSS.SpreadsheetTest do
   test "write some lines and append two rows between them", %{spreadsheet: pid} do
     :ok = GSS.Spreadsheet.write_row(pid, 1, @test_row1)
     :ok = GSS.Spreadsheet.write_row(pid, 2, @test_row2)
-    :ok = GSS.Spreadsheet.append_rows(pid, 1, [@test_row3, @test_row4])
+    :ok = GSS.Spreadsheet.append_rows(pid, 1, [@test_row3, [nil], @test_row4])
     {:ok, result} = GSS.Spreadsheet.read_row(pid, 3, column_to: 3)
     assert result == @test_row3
-    {:ok, result} = GSS.Spreadsheet.read_row(pid, 4, column_to: 4)
+    {:ok, result} = GSS.Spreadsheet.read_row(pid, 4, column_to: 1)
+    assert result == [""]
+    {:ok, result} = GSS.Spreadsheet.read_row(pid, 5, column_to: 4)
     assert result == @test_row4
     {:ok, result} = GSS.Spreadsheet.read_row(pid, 2, column_to: 6)
     assert result == @test_row2

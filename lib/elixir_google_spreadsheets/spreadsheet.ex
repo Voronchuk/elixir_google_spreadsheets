@@ -106,7 +106,7 @@ defmodule GSS.Spreadsheet do
   Append row in a spreadsheet after an index.
   """
   @spec append_row(pid, integer(), spreadsheet_data, Keyword.t()) :: :ok
-  def append_row(pid, row_index, [cell | _] = column_list, options \\ []) when is_binary(cell) do
+  def append_row(pid, row_index, [cell | _] = column_list, options \\ []) when is_binary(cell) or is_nil(cell) do
     gen_server_call(pid, {:append_rows, row_index, [column_list], options}, options)
   end
 
@@ -213,7 +213,7 @@ defmodule GSS.Spreadsheet do
   @spec append_rows(pid, integer(), [spreadsheet_data], Keyword.t()) ::
           :ok | {:error, Exception.t()}
   def append_rows(pid, row_index, [[cell | _] | _] = data, options \\ [])
-      when is_binary(cell) and row_index > 0 do
+      when (is_binary(cell) or is_nil(cell)) and row_index > 0 do
     gen_server_call(pid, {:append_rows, row_index, data, options}, options)
   end
 
@@ -374,7 +374,7 @@ defmodule GSS.Spreadsheet do
            "updatedColumns" => updated_columns
          }
        }}
-      when updated_columns > 0 and updated_rows === row_count ->
+      when updated_columns > 0 and updated_rows > 0 ->
         {:reply, :ok, state}
 
       {:error, exception} ->
