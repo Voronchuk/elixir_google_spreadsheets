@@ -43,7 +43,7 @@ defmodule GSS.Mixfile do
     [
       {:goth, "~> 1.0"},
       {:httpoison, "~> 1.4"},
-      {:gen_stage, "~> 0.14"},
+      {:gen_stage, "~> 1.0"},
       {:poison, "~> 3.1"},
       {:earmark, ">= 0.0.0", only: :dev},
       {:ex_doc, "~> 0.19", only: :dev},
