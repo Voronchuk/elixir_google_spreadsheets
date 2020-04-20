@@ -32,6 +32,11 @@ defmodule GSS.SpreadsheetTest do
     assert GSS.Spreadsheet.id(pid) == @test_spreadsheet_id
   end
 
+  test "should start only one for the same id", %{spreadsheet: pid} do
+    {:ok, pid2} = GSS.Spreadsheet.Supervisor.spreadsheet(@test_spreadsheet_id)
+    assert pid == pid2
+  end
+
   test "read total number of filled rows", %{spreadsheet: pid} do
     {:ok, result} = GSS.Spreadsheet.rows(pid)
     assert result == 0
