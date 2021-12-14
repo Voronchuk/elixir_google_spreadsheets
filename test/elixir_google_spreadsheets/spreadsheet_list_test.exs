@@ -16,7 +16,7 @@ defmodule GSS.SpreadsheetListTest do
 
     on_exit(fn ->
       cleanup_table(pid)
-      :ok = Supervisor.terminate_child(GSS.Spreadsheet.Supervisor, pid)
+      :ok = DynamicSupervisor.terminate_child(GSS.Spreadsheet.Supervisor, pid)
     end)
 
     {:ok, spreadsheet: pid}

@@ -6,37 +6,34 @@ defmodule GSS.Client.Supervisor do
   use Supervisor
   alias GSS.{Client, Client.Limiter, Client.Request}
 
-  @spec start_link() :: {:ok, pid}
-  def start_link do
-    Supervisor.start_link(__MODULE__, [], name: __MODULE__)
-  end
+  @spec start_link(any()) :: {:ok, pid}
+  def start_link(_args \\ []), do: init([])
 
-  @spec init([]) :: {:ok, {:supervisor.sup_flags(), [Supervisor.Spec.spec()]}} | :ignore
   def init([]) do
     config = Application.fetch_env!(:elixir_google_spreadsheets, :client)
     limiter_args = Keyword.take(config, [:max_demand, :interval, :max_interval])
 
     children = [
-      worker(Client, []),
-      worker(
-        Limiter,
+      {Client, []},
+      %{
+        id: Limiter.Writer,
+        start: {Limiter, :start_link,
         [
           limiter_args
           |> Keyword.put(:clients, [{Client, partition: :write}])
           |> Keyword.put(:name, Limiter.Writer)
-        ],
-        id: Limiter.Writer
-      ),
-      worker(
-        Limiter,
+        ]}
+      },
+      %{
+        id: Limiter.Reader,
+        start: {Limiter, :start_link,
         [
           limiter_args
           |> Keyword.put(:partition, :read)
           |> Keyword.put(:clients, [{Client, partition: :read}])
           |> Keyword.put(:name, Limiter.Reader)
-        ],
-        id: Limiter.Reader
-      )
+        ]}
+      }
     ]
 
     request_workers =
@@ -44,13 +41,12 @@ defmodule GSS.Client.Supervisor do
           {limiter, name} <- [{Limiter.Writer, Request.Write}, {Limiter.Reader, Request.Read}] do
         name = :"#{name}#{num}"
 
-        worker(
-          Request,
-          [[name: name, limiters: [{limiter, max_demand: 1}]]],
-          id: name
-        )
+        %{
+          id: name,
+          start: {Request, :start_link, [[name: name, limiters: [{limiter, max_demand: 1}]]]}
+        }
       end
 
-    supervise(children ++ request_workers, strategy: :one_for_one)
+    Supervisor.start_link(children ++ request_workers, [strategy: :one_for_one, name: __MODULE__])
   end
 end

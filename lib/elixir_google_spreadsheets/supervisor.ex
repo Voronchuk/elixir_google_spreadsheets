@@ -5,19 +5,14 @@ defmodule GSS.Supervisor do
 
   use Supervisor
 
-  @spec start_link() :: {:ok, pid()}
-  def start_link do
-    Supervisor.start_link(__MODULE__, [])
-  end
-
   @spec init([]) :: {:ok, {:supervisor.sup_flags(), [Supervisor.Spec.spec()]}} | :ignore
   def init([]) do
     children = [
-      worker(GSS.Registry, []),
-      supervisor(GSS.Spreadsheet.Supervisor, []),
-      supervisor(GSS.Client.Supervisor, [])
+      {GSS.Registry, []},
+      {GSS.Spreadsheet.Supervisor, []},
+      {GSS.Client.Supervisor, []}
     ]
 
-    supervise(children, strategy: :one_for_all)
+    Supervisor.start_link(children, [strategy: :one_for_all, name: __MODULE__])
   end
 end

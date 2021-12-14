@@ -6,7 +6,7 @@ defmodule GSS do
   use Application
 
   def start(_type, _args) do
-    GSS.Supervisor.start_link()
+    GSS.Supervisor.init([])
   end
 
   @doc """

@@ -21,8 +21,8 @@ defmodule GSS.Client do
   @type event :: {:request, GenStage.from(), RequestParams.t()}
   @type partition :: :write | :read
 
-  @spec start_link() :: GenServer.on_start()
-  def start_link do
+  @spec start_link(any()) :: GenServer.on_start()
+  def start_link(_args \\ []) do
     GenStage.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 

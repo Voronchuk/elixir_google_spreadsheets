@@ -20,8 +20,8 @@ defmodule GSS.Registry do
 
   @auth_scope "https://www.googleapis.com/auth/spreadsheets"
 
-  @spec start_link() :: {:ok, pid}
-  def start_link do
+  @spec start_link(any()) :: {:ok, pid}
+  def start_link(_args \\ []) do
     initial_state = %{
       active_sheets: %{}
     }
@@ -58,9 +58,7 @@ defmodule GSS.Registry do
     GenServer.call(__MODULE__, {:spreadsheet_pid, spreadsheet_id, opts})
   end
 
-  @doc """
-  Get account authorization token, issue new token in case old has expired.
-  """
+  # Get account authorization token, issue new token in case old has expired.
   def handle_call(
         :token,
         _from,
@@ -84,9 +82,7 @@ defmodule GSS.Registry do
     {:reply, new_state.auth.token, new_state}
   end
 
-  @doc """
-  Update :active_sheets registry record.
-  """
+  # Update :active_sheets registry record.
   def handle_call(
         {:new_spreadsheet, spreadsheet_id, pid, opts},
         _from,
@@ -99,9 +95,7 @@ defmodule GSS.Registry do
     {:reply, :ok, new_state}
   end
 
-  @doc """
-  Get pid of sheet in :active_sheets registry.
-  """
+  # Get pid of sheet in :active_sheets registry.
   def handle_call(
         {:spreadsheet_pid, spreadsheet_id, opts},
         _from,

@@ -217,17 +217,13 @@ defmodule GSS.Spreadsheet do
     gen_server_call(pid, {:append_rows, row_index, data, options}, options)
   end
 
-  @doc """
-  Get shreadsheet id stored in this state.
-  Used mainly for testing purposes.
-  """
+  # Get shreadsheet id stored in this state.
+  # Used mainly for testing purposes.
   def handle_call(:id, _from, %{spreadsheet_id: spreadsheet_id} = state) do
     {:reply, spreadsheet_id, state}
   end
 
-  @doc """
-  Get the shreadsheet properties
-  """
+  # Get the shreadsheet properties
   def handle_call(:properties, _from, %{spreadsheet_id: spreadsheet_id} = state) do
     query = spreadsheet_id
 
@@ -240,9 +236,7 @@ defmodule GSS.Spreadsheet do
     end
   end
 
-  @doc """
-  Get total number of rows from spreadsheets.
-  """
+  # Get total number of rows from spreadsheets.
   def handle_call(:rows, _from, %{spreadsheet_id: spreadsheet_id} = state) do
     query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}A1:B"
 
@@ -258,9 +252,7 @@ defmodule GSS.Spreadsheet do
     end
   end
 
-  @doc """
-  Fetch the given range of cells from the spreadsheet
-  """
+  # Fetch the given range of cells from the spreadsheet
   def handle_call({:fetch, the_range}, _from, %{spreadsheet_id: spreadsheet_id} = state) do
     query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{the_range}"
 
@@ -276,9 +268,7 @@ defmodule GSS.Spreadsheet do
     end
   end
 
-  @doc """
-  Get column value list for specific row from a spreadsheet.
-  """
+  # Get column value list for specific row from a spreadsheet.
   def handle_call(
         {:read_row, row_index, options},
         _from,
@@ -313,9 +303,7 @@ defmodule GSS.Spreadsheet do
     end
   end
 
-  @doc """
-  Write values in a specific row to a spreadsheet.
-  """
+  # Write values in a specific row to a spreadsheet.
   def handle_call(
         {:write_row, row_index, column_list, options},
         _from,
@@ -339,9 +327,7 @@ defmodule GSS.Spreadsheet do
     end
   end
 
-  @doc """
-  Insert row under some other row and write the column_list content there.
-  """
+  # Insert row under some other row and write the column_list content there.
   def handle_call(
         {:append_rows, row_index, column_lists, options},
         _from,
@@ -382,9 +368,7 @@ defmodule GSS.Spreadsheet do
     end
   end
 
-  @doc """
-  Clear rows in spreadsheet by their index.
-  """
+  # Clear rows in spreadsheet by their index.
   def handle_call(
         {:clear_row, row_index, options},
         _from,
@@ -404,9 +388,7 @@ defmodule GSS.Spreadsheet do
     end
   end
 
-  @doc """
-  Get column value list for specific row from a spreadsheet.
-  """
+  # Get column value list for specific row from a spreadsheet.
   def handle_call({:read_rows, [row | _] = rows, options}, from, state) when is_integer(row) do
     column_from = Keyword.get(options, :column_from, @default_column_from)
     column_to = Keyword.get(options, :column_to, @default_column_to)
@@ -474,9 +456,7 @@ defmodule GSS.Spreadsheet do
     handle_call({:read_rows, ranges, options}, from, state)
   end
 
-  @doc """
-  Clear rows in spreadsheet by their index.
-  """
+  # Clear rows in spreadsheet by their index.
   def handle_call(
         {:clear_rows, ranges, _options},
         _from,
@@ -510,9 +490,7 @@ defmodule GSS.Spreadsheet do
     handle_call({:clear_rows, ranges, options}, from, state)
   end
 
-  @doc """
-  Write values in batch based on a ranges schema.
-  """
+  # Write values in batch based on a ranges schema.
   def handle_call(
         {:write_rows, ranges, data, options},
         _from,
