@@ -21,7 +21,7 @@ Check [ecto_gss](https://github.com/Voronchuk/ecto_gss) if you need to integrate
 ## API limits
 For the non-default Google API limits, you can tune the following settings locally:
 
-```
+```elixir
 config :elixir_google_spreadsheets, :client,
   request_workers: 50,
   max_demand: 100,
@@ -32,11 +32,18 @@ config :elixir_google_spreadsheets, :client,
 # Usage
 Initialise spreadsheet thread with it's id which you can fetch from URL:
 
-    `{:ok, pid} = GSS.Spreadsheet.Supervisor.spreadsheet("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXXXXXXX")`
+```elixir
+    {:ok, pid} = GSS.Spreadsheet.Supervisor.spreadsheet("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXXXXXXX")
+```
 
 Or if you wish to edit only a specific list:
 
-    `{:ok, pid} = GSS.Spreadsheet.Supervisor.spreadsheet("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXXXXXXX", list_name: "my_list3")`
+```elixir
+    {:ok, pid} = GSS.Spreadsheet.Supervisor.spreadsheet(
+        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX-XXXXXXXXX",
+        list_name: "my_list3"
+    )
+```
 
 Sample operations:
 
