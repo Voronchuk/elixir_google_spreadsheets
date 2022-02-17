@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :elixir_google_spreadsheets, :client,
   request_workers: 50,
