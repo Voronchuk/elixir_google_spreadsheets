@@ -18,8 +18,6 @@ defmodule GSS.Registry do
   """
   @type state :: map()
 
-  @auth_scope "https://www.googleapis.com/auth/spreadsheets"
-
   @spec start_link(any()) :: {:ok, pid}
   def start_link(_args \\ []) do
     initial_state = %{
@@ -108,7 +106,7 @@ defmodule GSS.Registry do
 
   @spec refresh_token() :: map()
   defp refresh_token do
-    {:ok, token} = Goth.Token.for_scope(@auth_scope)
+    {:ok, token} = Goth.fetch(GSS.Goth)
     token
   end
 
