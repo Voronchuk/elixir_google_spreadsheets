@@ -41,10 +41,11 @@ defmodule GSS.Mixfile do
 
   defp deps do
     [
-      {:goth, "~> 1.2"},
+      {:goth, "~> 1.3-rc"},
+      {:hackney, "~> 1.18"},
       {:httpoison, "~> 1.8"},
       {:gen_stage, "~> 1.1"},
-      {:poison, ">= 1.0.0"},
+      {:poison, "~> 5.0"},
       {:earmark, ">= 0.0.0", only: :dev},
       {:ex_doc, "~> 0.24", only: :dev, runtime: false},
       {:logger_file_backend, ">= 0.0.12", only: [:dev, :test]},
