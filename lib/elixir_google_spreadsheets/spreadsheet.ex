@@ -73,9 +73,9 @@ defmodule GSS.Spreadsheet do
   @doc """
   Get total amount of rows in a spreadsheet.
   """
-  @spec rows(pid) :: {:ok, integer()} | {:error, Exception.t()}
-  def rows(pid) do
-    GenServer.call(pid, :rows)
+  @spec rows(pid, Keyword.t()) :: {:ok, integer()} | {:error, Exception.t()}
+  def rows(pid, options \\ []) do
+    gen_server_call(pid, :rows, options)
   end
 
   @doc """
