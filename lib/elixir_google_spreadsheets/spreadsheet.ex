@@ -19,7 +19,7 @@ defmodule GSS.Spreadsheet do
   @type spreadsheet_response :: {:json, map()} | {:error, Exception.t()} | no_return()
 
   @api_url_spreadsheet "https://sheets.googleapis.com/v4/spreadsheets/"
-  @default_ssl_request_params [cacerts: :certifi.cacerts()]
+
   @max_rows GSS.config(:max_rows_per_request, 301)
   @default_column_from GSS.config(:default_column_from, 1)
   @default_column_to GSS.config(:default_column_to, 26)
@@ -682,11 +682,22 @@ defmodule GSS.Spreadsheet do
   @spec get_request_params() :: Keyword.t()
   defp get_request_params do
     params = Client.config(:request_opts, [])
-    ssl_opts = Keyword.get(params, :ssl, [])
-    all_ssl_opts =
-      @default_ssl_request_params
-      |> Keyword.merge(ssl_opts)
-    Keyword.put(params, :ssl, all_ssl_opts)
+    Keyword.merge(params, [
+      timeout: :timer.seconds(8),
+      recv_timeout: :timer.seconds(5),
+      ssl: [
+        versions: [:"tlsv1.2"],
+        verify: :verify_peer,
+        depth: 99,
+        cacerts: :certifi.cacerts(),
+        customize_hostname_check: [
+          match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+        ],
+        reuse_sessions: false,
+        crl_check: true,
+        crl_cache: {:ssl_crl_cache, {:internal, [http: 30000]}}
+      ]
+    ])
   end
 
   defp gen_server_call(pid, tuple, options) do
