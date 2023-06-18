@@ -1,7 +1,7 @@
 defmodule GSS.SpreadsheetListTest do
   use ExUnit.Case, async: true
 
-  @test_spreadsheet_id Application.fetch_env!(:elixir_google_spreadsheets, :spreadsheet_id)
+  @test_spreadsheet_id Application.compile_env!(:elixir_google_spreadsheets, :spreadsheet_id)
   @test_list "list space"
   @test_row1 ["1", "2", "3", "4", "5"]
   @test_row2 ["6", "1", "2", "3", "4", "0"]
@@ -94,7 +94,7 @@ defmodule GSS.SpreadsheetListTest do
     assert result == [@test_row1 ++ [""], @test_row2]
   end
 
-  test "unexisting lists should gracefully fail", %{spreadsheet: pid} do
+  test "unexisting lists should gracefully fail", %{spreadsheet: _pid} do
     {:ok, pid} =
       GSS.Spreadsheet.Supervisor.spreadsheet(@test_spreadsheet_id,
         name: :unknown_list,

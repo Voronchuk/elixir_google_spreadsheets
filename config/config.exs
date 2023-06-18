@@ -43,7 +43,19 @@ config :elixir_google_spreadsheets, :client,
   result_timeout: :timer.minutes(10),
   request_opts: [
     timeout: :timer.seconds(8),
-    recv_timeout: :timer.seconds(5)
+    recv_timeout: :timer.seconds(5),
+    ssl: [
+      versions: [:"tlsv1.2"],
+      verify: :verify_peer,
+      depth: 99,
+      # cacerts: :certifi.cacerts(), defined at runtime
+      customize_hostname_check: [
+        match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+      ],
+      reuse_sessions: false,
+      crl_check: true,
+      crl_cache: {:ssl_crl_cache, {:internal, [http: 30000]}}
+    ]
   ]
 
 import_config "#{Mix.env()}.exs"
