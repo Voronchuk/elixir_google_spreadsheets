@@ -94,6 +94,11 @@ defmodule GSS.SpreadsheetTest do
     assert result == [nil, @test_row1, nil]
   end
 
+  test "read batched for only 1 row is possible", %{spreadsheet: pid} do
+    {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1, 1, column_to: 5)
+    assert result == [nil]
+  end
+
   test "read batched for 3 rows more then 1000 from start", %{spreadsheet: pid} do
     {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1000, 1002, column_to: 5)
     assert result == [nil, nil, nil]

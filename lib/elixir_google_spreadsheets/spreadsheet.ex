@@ -148,7 +148,7 @@ defmodule GSS.Spreadsheet do
           {:ok, [spreadsheet_data]} | {:error, atom}
   def read_rows(pid, row_index_start, row_index_end, options)
       when is_integer(row_index_start) and is_integer(row_index_end) and
-             row_index_start < row_index_end do
+             row_index_start <= row_index_end do
     gen_server_call(pid, {:read_rows, row_index_start, row_index_end, options}, options)
   end
 
