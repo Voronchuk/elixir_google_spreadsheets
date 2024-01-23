@@ -682,7 +682,7 @@ defmodule GSS.Spreadsheet do
   @spec get_request_params() :: Keyword.t()
   defp get_request_params do
     params = Client.config(:request_opts, [])
-    Keyword.merge(params, [
+    Keyword.merge([
       timeout: :timer.seconds(8),
       recv_timeout: :timer.seconds(5),
       ssl: [
@@ -697,7 +697,7 @@ defmodule GSS.Spreadsheet do
         crl_check: true,
         crl_cache: {:ssl_crl_cache, {:internal, [http: 30000]}}
       ]
-    ])
+    ], params)
   end
 
   defp gen_server_call(pid, tuple, options) do
