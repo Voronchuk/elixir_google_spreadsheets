@@ -683,8 +683,6 @@ defmodule GSS.Spreadsheet do
   defp get_request_params do
     params = Client.config(:request_opts, [])
     Keyword.merge(params, [
-      timeout: :timer.seconds(8),
-      recv_timeout: :timer.seconds(5),
       ssl: [
         versions: [:"tlsv1.2"],
         verify: :verify_peer,
