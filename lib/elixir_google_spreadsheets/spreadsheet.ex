@@ -78,8 +78,14 @@ defmodule GSS.Spreadsheet do
     gen_server_call(pid, :rows, options)
   end
 
+  @spec update_sheet_size(pid, integer(), integer(), Keyword.t()) ::
+          {:ok, integer()} | {:error, Exception.t()}
+  def update_sheet_size(pid, row_count, col_count, options \\ []) do
+    gen_server_call(pid, {:update_sheet_size, row_count, col_count, options}, options)
+  end
+
   @doc """
-  Granural read by a custom range from a spreadsheet.
+  Granular read by a custom range from a spreadsheet.
   """
   @spec fetch(pid, String.t()) :: {:ok, spreadsheet_data} | {:error, Exception.t()}
   def fetch(pid, range) do
@@ -106,7 +112,8 @@ defmodule GSS.Spreadsheet do
   Append row in a spreadsheet after an index.
   """
   @spec append_row(pid, integer(), spreadsheet_data, Keyword.t()) :: :ok
-  def append_row(pid, row_index, [cell | _] = column_list, options \\ []) when is_binary(cell) or is_nil(cell) do
+  def append_row(pid, row_index, [cell | _] = column_list, options \\ [])
+      when is_binary(cell) or is_nil(cell) do
     gen_server_call(pid, {:append_rows, row_index, [column_list], options}, options)
   end
 
@@ -192,7 +199,7 @@ defmodule GSS.Spreadsheet do
   as entries in data record.
   """
   @spec write_rows(pid, [String.t()], [spreadsheet_data], Keyword.t()) ::
-          :ok | {:error, Exception.t()}
+          {:ok, list()} | {:error, Exception.t()}
   def write_rows(pid, ranges, data, opts \\ [])
 
   def write_rows(pid, ranges, data, options)
@@ -217,13 +224,84 @@ defmodule GSS.Spreadsheet do
     gen_server_call(pid, {:append_rows, row_index, data, options}, options)
   end
 
-  # Get shreadsheet id stored in this state.
+  @spec set_basic_filter(pid, map(), map(), Keyword.t()) :: {:ok, map()} | {:error, Exception.t()}
+  def set_basic_filter(pid, grid_range, params, opts \\ [])
+
+  def set_basic_filter(pid, grid_range, params, options) do
+    gen_server_call(pid, {:set_basic_filter, grid_range, params, options}, options)
+  end
+
+  @spec clear_basic_filter(pid) :: {:ok, map()} | {:error, Exception.t()}
+  def clear_basic_filter(pid, opts \\ [])
+
+  def clear_basic_filter(pid, options) do
+    gen_server_call(pid, {:clear_basic_filter, options}, options)
+  end
+
+  @spec add_filter_view(pid, map(), map(), Keyword.t()) :: :ok | {:error, Exception.t()}
+  def add_filter_view(pid, grid_range, params, opts \\ [])
+
+  def add_filter_view(pid, grid_range, params, options) do
+    gen_server_call(pid, {:add_filter_view, grid_range, params, options}, options)
+  end
+
+  @spec freeze_header_row(pid, integer(), Keyword.t()) :: {:ok, %{}} | {:error, Exception.t()}
+  def freeze_header_row(pid, n_freeze, opts \\ [])
+
+  def freeze_header_row(pid, n_freeze, options) do
+    gen_server_call(pid, {:freeze, :row, n_freeze, options}, options)
+  end
+
+  @spec freeze_header_col(pid, integer(), Keyword.t()) :: {:ok, %{}} | {:error, Exception.t()}
+  def freeze_header_col(pid, n_freeze, opts \\ [])
+
+  def freeze_header_col(pid, n_freeze, options) do
+    gen_server_call(pid, {:freeze, :col, n_freeze, options}, options)
+  end
+
+  @spec update_col_width(pid, map(), Keyword.t()) :: :ok | {:error, Exception.t()}
+  def update_col_width(pid, params, opts \\ [])
+
+  def update_col_width(pid, params, options) do
+    gen_server_call(pid, {:update_col_width, params, options}, options)
+  end
+
+  @spec add_number_format(pid, map(), map(), Keyword.t()) :: :ok | {:error, Exception.t()}
+  def add_number_format(pid, grid_range, params, opts \\ [])
+
+  def add_number_format(pid, grid_range, params, options) do
+    gen_server_call(pid, {:add_number_format, grid_range, params, options}, options)
+  end
+
+  @spec set_font(pid, map(), map(), Keyword.t()) :: {:ok, map()} | {:error, Exception.t()}
+  def set_font(pid, grid_range, params, opts \\ [])
+
+  def set_font(pid, grid_range, params, options) do
+    gen_server_call(pid, {:set_font, grid_range, params, options}, options)
+  end
+
+  @spec add_conditional_formula(pid, map(), map(), Keyword.t()) ::
+          {:ok, map()} | {:error, Exception.t()}
+  def add_conditional_formula(pid, grid_range, params, opts \\ [])
+
+  def add_conditional_formula(pid, grid_range, params, options) do
+    gen_server_call(pid, {:add_conditional_formula, grid_range, params, options}, options)
+  end
+
+  @spec update_border(pid, map(), map(), Keyword.t()) :: :ok | {:error, Exception.t()}
+  def update_border(pid, grid_range, params, opts \\ [])
+
+  def update_border(pid, grid_range, params, options) do
+    gen_server_call(pid, {:update_border, grid_range, params, options}, options)
+  end
+
+  # Get spreadsheet id stored in this state.
   # Used mainly for testing purposes.
   def handle_call(:id, _from, %{spreadsheet_id: spreadsheet_id} = state) do
     {:reply, spreadsheet_id, state}
   end
 
-  # Get the shreadsheet properties
+  # Get the spreadsheet properties
   def handle_call(:properties, _from, %{spreadsheet_id: spreadsheet_id} = state) do
     query = spreadsheet_id
 
@@ -233,6 +311,19 @@ defmodule GSS.Spreadsheet do
 
       {:error, exception} ->
         {:reply, {:error, exception}, state}
+    end
+  end
+
+  # get spreadsheet sheet_id from properties, associated with the list_name.
+  def handle_call(:sheet_id, from, %{list_name: list_name} = state) do
+    with {:reply, {:ok, %{"sheets" => sheets}}, _state} <- handle_call(:properties, from, state) do
+      [sheet_id] =
+        Enum.filter(sheets, fn %{"properties" => %{"title" => title}} -> title == list_name end)
+        |> Enum.map(fn %{"properties" => %{"sheetId" => sheet_id}} -> sheet_id end)
+
+      {:reply, {:ok, sheet_id}, state}
+    else
+      {:error, exception} -> {:reply, {:error, exception}, state}
     end
   end
 
@@ -250,6 +341,30 @@ defmodule GSS.Spreadsheet do
       {:error, exception} ->
         {:reply, {:error, exception}, state}
     end
+  end
+
+  def handle_call(
+        {:update_sheet_size, row_count, col_count, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    request_body = %{
+      requests: [
+        %{
+          updateSheetProperties: %{
+            fields: "gridProperties",
+            properties: %{
+              sheetId: sheet_id,
+              gridProperties: %{rowCount: row_count, columnCount: col_count}
+            }
+          }
+        }
+      ]
+    }
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
   # Fetch the given range of cells from the spreadsheet
@@ -524,6 +639,275 @@ defmodule GSS.Spreadsheet do
     end
   end
 
+  # Set Basic Filter. Map `params` must include keys `col_idx`, `condition_type`, `user_entered_value`.
+  # To not add a column filter, leave them as nil.
+  def handle_call(
+        {:set_basic_filter, grid_range, params, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    %{col_idx: col_idx, condition_type: condition_type, user_entered_value: user_entered_value} =
+      params
+
+    request_body = %{
+      requests: [
+        %{
+          setBasicFilter: %{
+            filter:
+              Map.merge(
+                %{range: grid_range(grid_range, sheet_id)},
+                filter_specs(col_idx, condition_type, user_entered_value)
+              )
+          }
+        }
+      ]
+    }
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  ## Clear Basic Filter.
+  def handle_call(
+        {:clear_basic_filter, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    request_body = %{requests: [%{clearBasicFilter: %{sheetId: sheet_id}}]}
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  # Add Filter View. Map `params` must include keys `col_idx`, `condition_type`, `user_entered_value`.
+  # TODO: doesn't seem to be working.
+  def handle_call(
+        {:add_filter_view, grid_range, params, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    %{col_idx: col_idx, condition_type: condition_type, user_entered_value: user_entered_value} =
+      params
+
+    request_body = %{
+      requests: [
+        %{
+          addFilterView: %{
+            filter: %{
+              range: grid_range(grid_range, sheet_id),
+              filter_specs_map: filter_specs(col_idx, condition_type, user_entered_value)
+            }
+          }
+        }
+      ]
+    }
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  def handle_call(
+        {:freeze, :row, n_freeze, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    request_body = %{
+      requests: [
+        %{
+          updateSheetProperties: %{
+            properties: %{sheetId: sheet_id, gridProperties: %{:frozenRowCount => n_freeze}},
+            fields: "gridProperties.frozenRowCount"
+          }
+        }
+      ]
+    }
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  def handle_call(
+        {:freeze, :col, n_freeze, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    request_body = %{
+      requests: [
+        %{
+          updateSheetProperties: %{
+            properties: %{sheetId: sheet_id, gridProperties: %{:frozenColumnCount => n_freeze}},
+            fields: "gridProperties.frozenColumnCount"
+          }
+        }
+      ]
+    }
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  def handle_call(
+        {:update_col_width, %{col_idx: col_idx, col_width: col_width}, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    request_body = %{
+      requests: [
+        %{
+          updateDimensionProperties: %{
+            range: %{
+              sheetId: sheet_id,
+              dimension: "COLUMNS",
+              startIndex: col_idx,
+              endIndex: col_idx + 1
+            },
+            properties: %{pixelSize: col_width},
+            fields: "pixelSize"
+          }
+        }
+      ]
+    }
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  # Add Number Format. For type "DATE" and "NUMBER".
+  def handle_call(
+        {:add_number_format, grid_range, %{type: type, pattern: pattern}, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    request_body = %{
+      requests: [
+        %{
+          repeatCell: %{
+            range: grid_range(grid_range, sheet_id),
+            fields: "userEnteredFormat.numberFormat",
+            cell: %{userEnteredFormat: %{numberFormat: %{type: type, pattern: pattern}}}
+          }
+        }
+      ]
+    }
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  # Set Font.
+  def handle_call(
+        {:set_font, grid_range, %{font_family: font_family}, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    request_body = %{
+      requests: [
+        %{
+          repeatCell: %{
+            range: grid_range(grid_range, sheet_id),
+            fields: "userEnteredFormat.textFormat",
+            cell: %{userEnteredFormat: %{textFormat: %{fontFamily: font_family}}}
+          }
+        }
+      ]
+    }
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  # Add Conditional Formula.
+  def handle_call(
+        {:add_conditional_formula, grid_range, %{formula: formula, color_map: color_map},
+         options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    request_body = %{
+      requests: [
+        %{
+          addConditionalFormatRule: %{
+            rule: %{
+              ranges: [grid_range(grid_range, sheet_id)],
+              booleanRule: %{
+                condition: %{type: "CUSTOM_FORMULA", values: [%{userEnteredValue: formula}]},
+                format: %{backgroundColor: color_map}
+              }
+            }
+          }
+        }
+      ]
+    }
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  # Update Border. Map `params` must have keys in `[:top, :bottom, :left, :right]`.
+  # If a key is omitted, then the border is left as-is. Subkeys are [`style`, `red`, `green`, `blue`, `alpha`].
+  def handle_call(
+        {:update_border, grid_range, params, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+
+    # TODO: should I verify here that the keys are in [:top, :bottom, :left, :right] ?
+    border_map =
+      Enum.reduce(params, %{}, fn {k, %{red: r, green: g, blue: b, alpha: a, style: s}}, acc ->
+        border_v = %{
+          style: String.upcase(s),
+          colorStyle: %{rgbColor: %{red: r, green: g, blue: b, alpha: a}}
+        }
+
+        Map.put(acc, k, border_v)
+      end)
+
+    request_body = %{
+      requests: [
+        %{updateBorders: Map.merge(%{range: grid_range(grid_range, sheet_id)}, border_map)}
+      ]
+    }
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  def filter_specs(nil, nil, nil), do: %{}
+
+  def filter_specs(columnIndex, type, userEnteredValue) do
+    %{
+      filterSpecs: [
+        %{
+          columnIndex: columnIndex,
+          filterCriteria: %{
+            condition: %{type: type, values: [%{userEnteredValue: userEnteredValue}]}
+          }
+        }
+      ]
+    }
+  end
+
+  def batch_update_query(spreadsheet_id, request_body, options, state) do
+    query = "#{spreadsheet_id}:batchUpdate"
+
+    case spreadsheet_query_post_batch(query, request_body, options) do
+      {:json, %{"replies" => [replies], "spreadsheetId" => _}} ->
+        {:reply, {:ok, replies}, state}
+
+      {:error, exception} ->
+        {:reply, {:error, exception}, state}
+    end
+  end
+
   @spec spreadsheet_query(:get | :post, String.t()) :: spreadsheet_response
   defp spreadsheet_query(type, url_suffix) when is_atom(type) do
     headers = %{"Authorization" => "Bearer #{GSS.Registry.token()}"}
@@ -606,6 +990,21 @@ defmodule GSS.Spreadsheet do
   @spec range(integer(), integer(), integer(), integer(), state) :: String.t()
   def range(row_from, row_to, column_from, column_to, state) do
     maybe_attach_list(state) <> range(row_from, row_to, column_from, column_to)
+  end
+
+  @doc """
+  Combine the sheet_id into the grid_range, and drop any values from the range that are nil.
+  """
+  @spec grid_range(map(), String.t()) :: map()
+  def grid_range(%{row_from: rf, row_to: rt, col_from: cf, col_to: ct}, sheet_id) do
+    %{
+      sheetId: sheet_id,
+      startRowIndex: rf,
+      endRowIndex: rt,
+      startColumnIndex: cf,
+      endColumnIndex: ct
+    }
+    |> Map.filter(fn {_k, v} -> v != nil end)
   end
 
   @spec pad(integer()) :: spreadsheet_data
