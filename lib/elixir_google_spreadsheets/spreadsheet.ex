@@ -79,7 +79,7 @@ defmodule GSS.Spreadsheet do
   end
 
   @spec update_sheet_size(pid, integer(), integer(), Keyword.t()) ::
-          {:ok, integer()} | {:error, Exception.t()}
+          {:ok, list()} | {:error, Exception.t()}
   def update_sheet_size(pid, row_count, col_count, options \\ []) do
     gen_server_call(pid, {:update_sheet_size, row_count, col_count, options}, options)
   end
@@ -224,7 +224,7 @@ defmodule GSS.Spreadsheet do
     gen_server_call(pid, {:append_rows, row_index, data, options}, options)
   end
 
-  @spec set_basic_filter(pid, map(), map(), Keyword.t()) :: {:ok, map()} | {:error, Exception.t()}
+  @spec set_basic_filter(pid, map(), map(), Keyword.t()) :: {:ok, list()} | {:error, Exception.t()}
   def set_basic_filter(pid, grid_range, params, opts \\ [])
 
   def set_basic_filter(pid, grid_range, params, options) do
@@ -245,35 +245,28 @@ defmodule GSS.Spreadsheet do
     gen_server_call(pid, {:add_filter_view, grid_range, params, options}, options)
   end
 
-  @spec freeze_header_row(pid, integer(), Keyword.t()) :: {:ok, %{}} | {:error, Exception.t()}
-  def freeze_header_row(pid, n_freeze, opts \\ [])
+  @spec freeze_header(pid, integer(), Keyword.t()) :: {:ok, list()} | {:error, Exception.t()}
+  def freeze_header(pid, params, opts \\ [])
 
-  def freeze_header_row(pid, n_freeze, options) do
-    gen_server_call(pid, {:freeze, :row, n_freeze, options}, options)
+  def freeze_header(pid, params, options) do
+    gen_server_call(pid, {:freeze_header, params, options}, options)
   end
 
-  @spec freeze_header_col(pid, integer(), Keyword.t()) :: {:ok, %{}} | {:error, Exception.t()}
-  def freeze_header_col(pid, n_freeze, opts \\ [])
-
-  def freeze_header_col(pid, n_freeze, options) do
-    gen_server_call(pid, {:freeze, :col, n_freeze, options}, options)
-  end
-
-  @spec update_col_width(pid, map(), Keyword.t()) :: :ok | {:error, Exception.t()}
+  @spec update_col_width(pid, map(), Keyword.t()) :: {:ok, list()} | {:error, Exception.t()}   ## should be, right?
   def update_col_width(pid, params, opts \\ [])
 
   def update_col_width(pid, params, options) do
     gen_server_call(pid, {:update_col_width, params, options}, options)
   end
 
-  @spec add_number_format(pid, map(), map(), Keyword.t()) :: :ok | {:error, Exception.t()}
+  @spec add_number_format(pid, map(), map(), Keyword.t()) :: {:ok, list()} | {:error, Exception.t()}   ## should be, right?
   def add_number_format(pid, grid_range, params, opts \\ [])
 
   def add_number_format(pid, grid_range, params, options) do
     gen_server_call(pid, {:add_number_format, grid_range, params, options}, options)
   end
 
-  @spec set_font(pid, map(), map(), Keyword.t()) :: {:ok, map()} | {:error, Exception.t()}
+  @spec set_font(pid, map(), map(), Keyword.t()) :: {:ok, list()} | {:error, Exception.t()}
   def set_font(pid, grid_range, params, opts \\ [])
 
   def set_font(pid, grid_range, params, options) do
@@ -281,18 +274,28 @@ defmodule GSS.Spreadsheet do
   end
 
   @spec add_conditional_formula(pid, map(), map(), Keyword.t()) ::
-          {:ok, map()} | {:error, Exception.t()}
+          {:ok, list()} | {:error, Exception.t()}
   def add_conditional_formula(pid, grid_range, params, opts \\ [])
 
   def add_conditional_formula(pid, grid_range, params, options) do
     gen_server_call(pid, {:add_conditional_formula, grid_range, params, options}, options)
   end
 
-  @spec update_border(pid, map(), map(), Keyword.t()) :: :ok | {:error, Exception.t()}
+  @spec update_border(pid, map(), map(), Keyword.t()) :: {:ok, list()} | {:error, Exception.t()}    ## should be, right?
   def update_border(pid, grid_range, params, opts \\ [])
 
   def update_border(pid, grid_range, params, options) do
     gen_server_call(pid, {:update_border, grid_range, params, options}, options)
+  end
+
+  @doc """
+  Batch requests for batchUpdate functions.
+  """
+  @spec batch_requests(pid, list(), list(), list(), Keyword.t()) :: {:ok, list()} | {:error, Exception.t()}   ## should be, right?
+  def batch_requests(pid, fn_list, range_list, params_list, opts \\ [])
+
+  def batch_requests(pid, fn_list, range_list, params_list, options) do
+    gen_server_call(pid, {:batch_requests, fn_list, range_list, params_list, options}, options)
   end
 
   # Get spreadsheet id stored in this state.
@@ -710,146 +713,130 @@ defmodule GSS.Spreadsheet do
   end
 
   def handle_call(
-        {:freeze, :row, n_freeze, options},
+        {:freeze_header, params, options},
         from,
         %{spreadsheet_id: spreadsheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    request_body = %{
-      requests: [
-        %{
-          updateSheetProperties: %{
-            properties: %{sheetId: sheet_id, gridProperties: %{:frozenRowCount => n_freeze}},
-            fields: "gridProperties.frozenRowCount"
-          }
-        }
-      ]
-    }
-
+    {:reply, {:ok, req}, _state} = handle_call({:get, :freeze_header, nil, params, options}, from, state)
+    request_body = %{requests: [req]}
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
-  def handle_call(
-        {:freeze, :col, n_freeze, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
-      ) do
+  def handle_call({:get, :freeze_header, _range, %{row_col: row_col, n_freeze: n_freeze}, options}, from, state) do
     {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
 
-    request_body = %{
-      requests: [
-        %{
-          updateSheetProperties: %{
-            properties: %{sheetId: sheet_id, gridProperties: %{:frozenColumnCount => n_freeze}},
-            fields: "gridProperties.frozenColumnCount"
-          }
-        }
-      ]
-    }
+    row_col_count =
+      case row_col do
+        :row -> "frozenRowCount"
+        :col -> "frozenColumnCount"
+      end
 
-    batch_update_query(spreadsheet_id, request_body, options, state)
+    req = %{
+        updateSheetProperties: %{
+          properties: %{sheetId: sheet_id, gridProperties: %{String.to_atom(row_col_count) => n_freeze}},
+          fields: "gridProperties." <> row_col_count
+        }
+      }
+    {:reply, {:ok, req}, state}
   end
 
+
   def handle_call(
-        {:update_col_width, %{col_idx: col_idx, col_width: col_width}, options},
+        {:update_col_width, params, options},
         from,
         %{spreadsheet_id: spreadsheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    request_body = %{
-      requests: [
-        %{
-          updateDimensionProperties: %{
-            range: %{
-              sheetId: sheet_id,
-              dimension: "COLUMNS",
-              startIndex: col_idx,
-              endIndex: col_idx + 1
-            },
-            properties: %{pixelSize: col_width},
-            fields: "pixelSize"
-          }
-        }
-      ]
-    }
-
+    {:reply, {:ok, req}, _state} = handle_call({:get, :update_col_width, nil, params, options}, from, state)
+    request_body = %{requests: [req]}
     batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+  def handle_call({:get, :update_col_width, _range, %{col_idx: col_idx, col_width: col_width}, options}, from, state) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+    req = %{
+      updateDimensionProperties: %{
+        range: %{
+          sheetId: sheet_id,
+          dimension: "COLUMNS",
+          startIndex: col_idx,
+          endIndex: col_idx + 1
+        },
+        properties: %{pixelSize: col_width},
+        fields: "pixelSize"
+      }
+    }
+    {:reply, {:ok, req}, state}
   end
 
   # Add Number Format. For type "DATE" and "NUMBER".
   def handle_call(
-        {:add_number_format, grid_range, %{type: type, pattern: pattern}, options},
+        {:add_number_format, grid_range, params, options},
         from,
         %{spreadsheet_id: spreadsheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    request_body = %{
-      requests: [
-        %{
-          repeatCell: %{
-            range: grid_range(grid_range, sheet_id),
-            fields: "userEnteredFormat.numberFormat",
-            cell: %{userEnteredFormat: %{numberFormat: %{type: type, pattern: pattern}}}
-          }
-        }
-      ]
-    }
-
+    {:reply, {:ok, req}, _state} = handle_call({:get, :add_number_format, grid_range, params, options}, from, state)
+    request_body = %{requests: [req]}
     batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+  def handle_call({:get, :add_number_format, grid_range, %{type: type, pattern: pattern}, options}, from, state) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+    req = %{
+      repeatCell: %{
+        range: grid_range(grid_range, sheet_id),
+        fields: "userEnteredFormat.numberFormat",
+        cell: %{userEnteredFormat: %{numberFormat: %{type: type, pattern: pattern}}}
+      }
+    }
+    {:reply, {:ok, req}, state}
   end
 
   # Set Font.
   def handle_call(
-        {:set_font, grid_range, %{font_family: font_family}, options},
+        {:set_font, grid_range, params, options},
         from,
         %{spreadsheet_id: spreadsheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    request_body = %{
-      requests: [
-        %{
-          repeatCell: %{
-            range: grid_range(grid_range, sheet_id),
-            fields: "userEnteredFormat.textFormat",
-            cell: %{userEnteredFormat: %{textFormat: %{fontFamily: font_family}}}
-          }
-        }
-      ]
-    }
-
+    {:reply, {:ok, req}, _state} = handle_call({:get, :set_font, grid_range, params, options}, from, state)
+    request_body = %{requests: [req]}
     batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  def handle_call({:get, :set_font, grid_range, %{font_family: font_family}, options}, from, state) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+    req = %{
+        repeatCell: %{
+          range: grid_range(grid_range, sheet_id),
+          fields: "userEnteredFormat.textFormat",
+          cell: %{userEnteredFormat: %{textFormat: %{fontFamily: font_family}}}
+        }
+      }
+    {:reply, {:ok, req}, state}
   end
 
   # Add Conditional Formula.
   def handle_call(
-        {:add_conditional_formula, grid_range, %{formula: formula, color_map: color_map},
-         options},
+        {:add_conditional_formula, grid_range, params, options},
         from,
         %{spreadsheet_id: spreadsheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+    {:reply, {:ok, req}, _state} = handle_call({:get, :add_conditional_formula, grid_range, params, options}, from, state)
+    request_body = %{requests: [req]}
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
 
-    request_body = %{
-      requests: [
-        %{
-          addConditionalFormatRule: %{
-            rule: %{
-              ranges: [grid_range(grid_range, sheet_id)],
-              booleanRule: %{
-                condition: %{type: "CUSTOM_FORMULA", values: [%{userEnteredValue: formula}]},
-                format: %{backgroundColor: color_map}
-              }
-            }
+  def handle_call({:get, :add_conditional_formula, grid_range, %{formula: formula, color_map: color_map}, options}, from, state) do
+    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+    req = %{
+      addConditionalFormatRule: %{
+        rule: %{
+          ranges: [grid_range(grid_range, sheet_id)],
+          booleanRule: %{
+            condition: %{type: "CUSTOM_FORMULA", values: [%{userEnteredValue: formula}]},
+            format: %{backgroundColor: color_map}
           }
         }
-      ]
+      }
     }
-
-    batch_update_query(spreadsheet_id, request_body, options, state)
+    {:reply, {:ok, req}, state}
   end
 
   # Update Border. Map `params` must have keys in `[:top, :bottom, :left, :right]`.
@@ -881,6 +868,24 @@ defmodule GSS.Spreadsheet do
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
+  def handle_call(
+        {:batch_requests, fn_list, range_list, params_list, options},
+        from,
+        %{spreadsheet_id: spreadsheet_id} = state
+      ) do
+    req_list =
+      Enum.zip(fn_list, Enum.zip(range_list, params_list))
+      |> Enum.map(fn {fun, {r, p}} ->
+        {:reply, {:ok, req}, _state} = handle_call({:get, fun, r, p, options}, from, state)
+        req
+      end)
+
+    request_body = %{requests: req_list}
+    query = "#{spreadsheet_id}:batchUpdate"
+
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
   def filter_specs(nil, nil, nil), do: %{}
 
   def filter_specs(columnIndex, type, userEnteredValue) do
@@ -900,7 +905,7 @@ defmodule GSS.Spreadsheet do
     query = "#{spreadsheet_id}:batchUpdate"
 
     case spreadsheet_query_post_batch(query, request_body, options) do
-      {:json, %{"replies" => [replies], "spreadsheetId" => _}} ->
+      {:json, %{"replies" => replies, "spreadsheetId" => _}} ->
         {:reply, {:ok, replies}, state}
 
       {:error, exception} ->
