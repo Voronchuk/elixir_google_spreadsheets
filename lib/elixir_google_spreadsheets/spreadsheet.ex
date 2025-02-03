@@ -11,7 +11,8 @@ defmodule GSS.Spreadsheet do
   State of currently active Google spreadsheet:
       %{
           spreadsheet_id => "16Wgt0fuoYDgEAtGtYKF4jdjAhZez0q77UhkKdeKI6B4",
-          list_name => nil
+          list_name => nil,
+          sheet_id => nil
       }
   """
   @type state :: map()
@@ -55,6 +56,18 @@ defmodule GSS.Spreadsheet do
   def properties(pid) do
     GenServer.call(pid, :properties)
   end
+
+  @doc """
+  Get sheet id associated with list_name in state.
+  """
+  @spec get_sheet_id(pid) :: {:ok, integer()}
+  def get_sheet_id(pid), do: GenServer.call(pid, :get_sheet_id)
+
+  @doc """
+  Add the sheet id associated with the list_name to the state.
+  """
+  @spec add_sheet_id_to_state(pid) :: {:ok, nil}
+  def add_sheet_id_to_state(pid), do: {:ok, nil} = GenServer.call(pid, :add_sheet_id_to_state)
 
   @doc """
   Get spreadsheet sheets from properties.
@@ -369,28 +382,6 @@ defmodule GSS.Spreadsheet do
     gen_server_call(pid, {:update_border, grid_range, params, options}, options)
   end
 
-  @doc """
-  Batch requests for multiple batchUpdate functions.
-
-  Function list, range list, and params list should contain the same number of elements.
-  """
-  @spec batch_requests(pid, list(), list(), list(), Keyword.t()) ::
-          {:ok, list()} | {:error, Exception.t()}
-  def batch_requests(pid, fn_list, range_list, params_list, opts \\ [])
-
-  def batch_requests(pid, fn_list, range_list, params_list, options)
-      when length(fn_list) == length(range_list) == length(params_list) do
-    gen_server_call(pid, {:batch_requests, fn_list, range_list, params_list, options}, options)
-  end
-
-  def batch_requests(_, _, _, _, _),
-    do:
-      {:error,
-       %GSS.InvalidInput{
-         message:
-           "invalid input: length of function list, range list, and params_list should be the same"
-       }}
-
   # Get spreadsheet id stored in this state.
   # Used mainly for testing purposes.
   def handle_call(:id, _from, %{spreadsheet_id: spreadsheet_id} = state) do
@@ -410,14 +401,29 @@ defmodule GSS.Spreadsheet do
     end
   end
 
-  # get spreadsheet sheet_id from properties, associated with the list_name.
-  def handle_call(:sheet_id, from, %{list_name: list_name} = state) do
-    with {:reply, {:ok, %{"sheets" => sheets}}, _state} <- handle_call(:properties, from, state) do
+  # Get the sheet id from state.
+  # Used mainly in Spreadsheet.Supervisor.spreadsheet/2.
+  def handle_call(:get_sheet_id, _from, %{sheet_id: sheet_id} = state) when is_nil(sheet_id) do
+    {:reply, {:ok, nil}, state}
+  end
+
+  def handle_call(:get_sheet_id, _from, %{sheet_id: sheet_id} = state) do
+    {:reply, {:ok, sheet_id}, state}
+  end
+
+  # Add the sheet id associated with the list_name to the state.
+  def handle_call(:add_sheet_id_to_state, _from, %{list_name: list_name} = state)
+      when is_nil(list_name) do
+    {:reply, {:ok, nil}, state}
+  end
+
+  def handle_call(:add_sheet_id_to_state, from, %{list_name: list_name} = state) do
+    with {:reply, {:ok, %{"sheets" => sheets}}, state} <- handle_call(:properties, from, state) do
       [sheet_id] =
         Enum.filter(sheets, fn %{"properties" => %{"title" => title}} -> title == list_name end)
         |> Enum.map(fn %{"properties" => %{"sheetId" => sheet_id}} -> sheet_id end)
 
-      {:reply, {:ok, sheet_id}, state}
+      {:reply, {:ok, nil}, Map.put(state, :sheet_id, sheet_id)}
     else
       {:error, exception} -> {:reply, {:error, exception}, state}
     end
@@ -441,11 +447,9 @@ defmodule GSS.Spreadsheet do
 
   def handle_call(
         {:update_sheet_size, row_count, col_count, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
     request_body = %{
       requests: [
         %{
@@ -737,61 +741,36 @@ defmodule GSS.Spreadsheet do
 
   def handle_call(
         {:set_basic_filter, grid_range, params, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
       ) do
-    {:reply, {:ok, req}, _state} =
-      handle_call({:get, :set_basic_filter, grid_range, params}, from, state)
-
-    request_body = %{requests: [req]}
-    batch_update_query(spreadsheet_id, request_body, options, state)
-  end
-
-  def handle_call({:get, :set_basic_filter, grid_range, params}, from, state) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    req = %{
+    request = %{
       setBasicFilter: %{
-        filter: Map.merge(%{range: grid_range(grid_range, sheet_id)}, filter_specs(params))
+        filter: Map.merge(%{range: grid_range(sheet_id, grid_range)}, filter_specs(params))
       }
     }
 
-    {:reply, {:ok, req}, state}
-  end
-
-  def handle_call({:clear_basic_filter, options}, from, %{spreadsheet_id: spreadsheet_id} = state) do
-    {:reply, {:ok, req}, _state} = handle_call({:get, :clear_basic_filter, nil, nil}, from, state)
-    request_body = %{requests: [req]}
-    batch_update_query(spreadsheet_id, request_body, options, state)
-  end
-
-  def handle_call({:get, :clear_basic_filter, _range, _params}, from, state) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-    {:reply, {:ok, %{clearBasicFilter: %{sheetId: sheet_id}}}, state}
-  end
-
-  def handle_call(
-        {:freeze_header, params, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
-      ) do
-    {:reply, {:ok, req}, _state} =
-      handle_call({:get, :freeze_header, nil, params}, from, state)
-
-    request_body = %{requests: [req]}
+    request_body = %{requests: [request]}
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
   def handle_call(
-        {:get, :freeze_header, _range, %{dim: dim, n_freeze: n_freeze}},
-        from,
-        state
+        {:clear_basic_filter, options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
+    request_body = %{requests: [%{clearBasicFilter: %{sheetId: sheet_id}}]}
+    batch_update_query(spreadsheet_id, request_body, options, state)
+  end
 
+  def handle_call(
+        {:freeze_header, %{dim: dim, n_freeze: n_freeze}, options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
+      ) do
     row_col = if dim == :col, do: "frozenColumnCount", else: "frozenRowCount"
 
-    req = %{
+    request = %{
       updateSheetProperties: %{
         properties: %{
           sheetId: sheet_id,
@@ -801,29 +780,16 @@ defmodule GSS.Spreadsheet do
       }
     }
 
-    {:reply, {:ok, req}, state}
-  end
-
-  def handle_call(
-        {:update_col_width, params, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
-      ) do
-    {:reply, {:ok, req}, _state} =
-      handle_call({:get, :update_col_width, nil, params}, from, state)
-
-    request_body = %{requests: [req]}
+    request_body = %{requests: [request]}
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
   def handle_call(
-        {:get, :update_col_width, _range, %{col_idx: col_idx, col_width: col_width}},
-        from,
-        state
+        {:update_col_width, %{col_idx: col_idx, col_width: col_width}, options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    req = %{
+    request = %{
       updateDimensionProperties: %{
         range: %{
           sheetId: sheet_id,
@@ -836,31 +802,18 @@ defmodule GSS.Spreadsheet do
       }
     }
 
-    {:reply, {:ok, req}, state}
-  end
-
-  def handle_call(
-        {:add_number_format, grid_range, params, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
-      ) do
-    {:reply, {:ok, req}, _state} =
-      handle_call({:get, :add_number_format, grid_range, params}, from, state)
-
-    request_body = %{requests: [req]}
+    request_body = %{requests: [request]}
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
   def handle_call(
-        {:get, :add_number_format, grid_range, %{type: type, pattern: pattern}},
-        from,
-        state
+        {:add_number_format, grid_range, %{type: type, pattern: pattern}, options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    req = %{
+    request = %{
       repeatCell: %{
-        range: grid_range(grid_range, sheet_id),
+        range: grid_range(sheet_id, grid_range),
         fields: "userEnteredFormat.numberFormat",
         cell: %{
           userEnteredFormat: %{numberFormat: %{type: String.upcase(type), pattern: pattern}}
@@ -868,87 +821,53 @@ defmodule GSS.Spreadsheet do
       }
     }
 
-    {:reply, {:ok, req}, state}
-  end
-
-  def handle_call(
-        {:update_col_wrap, grid_range, params, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
-      ) do
-    {:reply, {:ok, req}, _state} =
-      handle_call({:get, :update_col_wrap, grid_range, params}, from, state)
-
-    request_body = %{requests: [req]}
+    request_body = %{requests: [request]}
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
   def handle_call(
-        {:get, :update_col_wrap, grid_range, %{wrap_strategy: wrap_strategy}},
-        from,
-        state
+        {:update_col_wrap, grid_range, %{wrap_strategy: wrap_strategy}, options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    req = %{
+    request = %{
       repeatCell: %{
-        range: grid_range(grid_range, sheet_id),
+        range: grid_range(sheet_id, grid_range),
         fields: "userEnteredFormat.wrapStrategy",
         cell: %{wrapStrategy: String.upcase(wrap_strategy)}
       }
     }
 
-    {:reply, {:ok, req}, state}
-  end
-
-  def handle_call(
-        {:set_font, grid_range, params, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
-      ) do
-    {:reply, {:ok, req}, _state} = handle_call({:get, :set_font, grid_range, params}, from, state)
-
-    request_body = %{requests: [req]}
+    request_body = %{requests: [request]}
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
-  def handle_call({:get, :set_font, grid_range, %{font_family: font_family}}, from, state) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    req = %{
+  def handle_call(
+        {:set_font, grid_range, %{font_family: font_family}, options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
+      ) do
+    request = %{
       repeatCell: %{
-        range: grid_range(grid_range, sheet_id),
+        range: grid_range(sheet_id, grid_range),
         fields: "userEnteredFormat.textFormat",
         cell: %{userEnteredFormat: %{textFormat: %{fontFamily: font_family}}}
       }
     }
 
-    {:reply, {:ok, req}, state}
-  end
-
-  def handle_call(
-        {:add_conditional_format, grid_range, params, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
-      ) do
-    {:reply, {:ok, req}, _state} =
-      handle_call({:get, :add_conditional_format, grid_range, params}, from, state)
-
-    request_body = %{requests: [req]}
+    request_body = %{requests: [request]}
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
   def handle_call(
-        {:get, :add_conditional_format, grid_range, %{formula: formula, color_map: color_map}},
-        from,
-        state
+        {:add_conditional_format, grid_range, %{formula: formula, color_map: color_map}, options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
       ) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    req = %{
+    request = %{
       addConditionalFormatRule: %{
         rule: %{
-          ranges: [grid_range(grid_range, sheet_id)],
+          ranges: [grid_range(sheet_id, grid_range)],
           booleanRule: %{
             condition: %{type: "CUSTOM_FORMULA", values: [%{userEnteredValue: formula}]},
             format: %{backgroundColor: color_map}
@@ -957,25 +876,16 @@ defmodule GSS.Spreadsheet do
       }
     }
 
-    {:reply, {:ok, req}, state}
+    request_body = %{requests: [request]}
+    batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
   def handle_call(
         {:update_border, grid_range, params, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
       ) do
-    {:reply, {:ok, req}, _state} =
-      handle_call({:get, :update_border, grid_range, params}, from, state)
-
-    request_body = %{requests: [req]}
-    batch_update_query(spreadsheet_id, request_body, options, state)
-  end
-
-  def handle_call({:get, :update_border, grid_range, params}, from, state) do
-    {:reply, {:ok, sheet_id}, _state} = handle_call(:sheet_id, from, state)
-
-    range = %{range: grid_range(grid_range, sheet_id)}
+    range = %{range: grid_range(sheet_id, grid_range)}
 
     border =
       Enum.reduce(params, %{}, fn {k, %{red: r, green: g, blue: b, alpha: a, style: s}}, acc ->
@@ -994,24 +904,7 @@ defmodule GSS.Spreadsheet do
         end
       end)
 
-    req = %{updateBorders: Map.merge(range, border)}
-
-    {:reply, {:ok, req}, state}
-  end
-
-  def handle_call(
-        {:batch_requests, fn_list, range_list, params_list, options},
-        from,
-        %{spreadsheet_id: spreadsheet_id} = state
-      ) do
-    req_list =
-      Enum.zip(fn_list, Enum.zip(range_list, params_list))
-      |> Enum.map(fn {fun, {r, p}} ->
-        {:reply, {:ok, req}, _state} = handle_call({:get, fun, r, p, options}, from, state)
-        req
-      end)
-
-    request_body = %{requests: req_list}
+    request_body = %{requests: [%{updateBorders: Map.merge(range, border)}]}
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
@@ -1133,8 +1026,8 @@ defmodule GSS.Spreadsheet do
   @doc """
   Combine the sheet_id into the grid_range, and drop any values from the range that are nil.
   """
-  @spec grid_range(grid_range(), String.t()) :: map()
-  def grid_range(%{row_from: rf, row_to: rt, col_from: cf, col_to: ct}, sheet_id) do
+  @spec grid_range(integer(), grid_range()) :: map()
+  def grid_range(sheet_id, %{row_from: rf, row_to: rt, col_from: cf, col_to: ct}) do
     %{
       sheetId: sheet_id,
       startRowIndex: rf,
