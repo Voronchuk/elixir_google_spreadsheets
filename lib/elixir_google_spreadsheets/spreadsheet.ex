@@ -73,10 +73,10 @@ defmodule GSS.Spreadsheet do
   Get spreadsheet sheets from properties.
   """
   @spec sheets(pid, Keyword.t()) :: [map()] | map()
-  def sheets(pid, opts \\ []) do
-    with {:ok, %{"sheets" => sheets}} <- GenServer.call(pid, :properties),
+  def sheets(pid, options \\ []) do
+    with {:ok, %{"sheets" => sheets}} <- gen_server_call(pid, :properties, options),
          {:is_raw_response?, false, _} <-
-           {:is_raw_response?, Keyword.get(opts, :raw, false), sheets} do
+           {:is_raw_response?, Keyword.get(options, :raw, false), sheets} do
       Enum.reduce(sheets, %{}, fn %{"properties" => %{"title" => title} = properties}, acc ->
         Map.put(acc, title, properties)
       end)
