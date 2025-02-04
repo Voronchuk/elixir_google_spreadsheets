@@ -18,6 +18,9 @@ Check [ecto_gss](https://github.com/Voronchuk/ecto_gss) if you need to integrate
         json: "./config/service_account.json" |> File.read!
 8. Run `mix deps.get && mix deps.compile`.
 
+## Testing
+The [following Google Spreadsheet](https://docs.google.com/spreadsheets/d/1h85keViqbRzgTN245gEw5s9roxpaUtT7i-mNXQtT8qQ/edit?usp=sharing) is used to run tests locally, it can be copied to run local tests.
+
 ## API limits
 All Google API limits, suggested params are the following:
 
