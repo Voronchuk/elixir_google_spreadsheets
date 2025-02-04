@@ -131,8 +131,7 @@ defmodule GSS.Spreadsheet do
   Append row in a spreadsheet after an index.
   """
   @spec append_row(pid, integer(), spreadsheet_data, Keyword.t()) :: :ok
-  def append_row(pid, row_index, [cell | _] = column_list, options \\ [])
-      when is_binary(cell) or is_nil(cell) do
+  def append_row(pid, row_index, [cell | _] = column_list, options \\ []) when is_binary(cell) or is_nil(cell) do
     gen_server_call(pid, {:append_rows, row_index, [column_list], options}, options)
   end
 
@@ -262,7 +261,7 @@ defmodule GSS.Spreadsheet do
   @doc """
   Clear Basic Filter.
   """
-  @spec clear_basic_filter(pid) :: {:ok, map()} | {:error, Exception.t()}
+  @spec clear_basic_filter(pid, Keyword.t()) :: {:ok, map()} | {:error, Exception.t()}
   def clear_basic_filter(pid, opts \\ [])
 
   def clear_basic_filter(pid, options) do
@@ -450,20 +449,17 @@ defmodule GSS.Spreadsheet do
         _from,
         %{spreadsheet_id: spreadsheet_id, sheet_id: sheet_id} = state
       ) do
-    request_body = %{
-      requests: [
-        %{
-          updateSheetProperties: %{
-            fields: "gridProperties",
-            properties: %{
-              sheetId: sheet_id,
-              gridProperties: %{rowCount: row_count, columnCount: col_count}
-            }
-          }
+    request = %{
+      updateSheetProperties: %{
+        fields: "gridProperties",
+        properties: %{
+          sheetId: sheet_id,
+          gridProperties: %{rowCount: row_count, columnCount: col_count}
         }
-      ]
+      }
     }
 
+    request_body = %{requests: [request]}
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
