@@ -335,7 +335,7 @@ defmodule GSS.Spreadsheet do
   @doc """
   Set Font.
 
-  Required keys in `params`: `font_family`.
+  Required key in `params`: `font_family`.
   """
   @spec set_font(pid, grid_range(), %{font_family: String.t()}, Keyword.t()) ::
           {:ok, list()} | {:error, Exception.t()}
@@ -830,7 +830,7 @@ defmodule GSS.Spreadsheet do
       repeatCell: %{
         range: grid_range(sheet_id, grid_range),
         fields: "userEnteredFormat.wrapStrategy",
-        cell: %{wrapStrategy: String.upcase(wrap_strategy)}
+        cell: %{userEnteredFormat: %{wrapStrategy: String.upcase(wrap_strategy)}}
       }
     }
 
@@ -884,12 +884,19 @@ defmodule GSS.Spreadsheet do
     range = %{range: grid_range(sheet_id, grid_range)}
 
     border =
-      Enum.reduce(params, %{}, fn {k, %{red: r, green: g, blue: b, alpha: a, style: s}}, acc ->
+      Enum.reduce(params, %{}, fn {k, v}, acc ->
         case k in [:top, :bottom, :left, :right] do
           true ->
             border_v = %{
-              style: String.upcase(s),
-              colorStyle: %{rgbColor: %{red: r, green: g, blue: b, alpha: a}}
+              style: String.upcase(Map.get(v, :style) || "SOLID"),
+              colorStyle: %{
+                rgbColor: %{
+                  red: Map.get(v, :red) || 0,
+                  green: Map.get(v, :green) || 0,
+                  blue: Map.get(v, :blue) || 0,
+                  alpha: Map.get(v, :alpha) || 1
+                }
+              }
             }
 
             Map.put(acc, k, border_v)
@@ -904,8 +911,6 @@ defmodule GSS.Spreadsheet do
     batch_update_query(spreadsheet_id, request_body, options, state)
   end
 
-  def filter_specs(%{}), do: %{}
-
   def filter_specs(%{col_idx: col, condition_type: type, user_entered_value: value}) do
     %{
       filterSpecs: [
@@ -916,6 +921,8 @@ defmodule GSS.Spreadsheet do
       ]
     }
   end
+
+  def filter_specs(%{}), do: %{}
 
   def filter_specs(_) do
     raise GSS.InvalidInput,

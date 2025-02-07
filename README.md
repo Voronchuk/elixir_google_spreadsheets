@@ -71,8 +71,11 @@ Sample operations:
 
 * `GSS.Spreadsheet.id(pid)`
 * `GSS.Spreadsheet.properties(pid)`
+* `GSS.Spreadsheet.get_sheet_id(pid)`
+* `GSS.Spreadsheet.add_sheet_id_to_state(pid)`
 * `GSS.Spreadsheet.sheets(pid)`
 * `GSS.Spreadsheet.rows(pid)`
+* `GSS.Spreadsheet.update_sheet_size(pid, 10, 5)`
 * `GSS.Spreadsheet.read_row(pid, 1, column_to: 5)`
 * `GSS.Spreadsheet.read_rows(pid, 1, 10, column_to: 5, pad_empty: true)`
 * `GSS.Spreadsheet.read_rows(pid, [1, 3, 5], column_to: 5, pad_empty: true)`
@@ -84,6 +87,17 @@ Sample operations:
 * `GSS.Spreadsheet.clear_row(pid, 1)`
 * `GSS.Spreadsheet.clear_rows(pid, 1, 10)`
 * `GSS.Spreadsheet.clear_rows(pid, ["A1:E1", "A2:E2"])`
+* `GSS.Spreadsheet.set_basic_filter(pid, %{row_from: 0, row_to: 5, col_from: 1, col_to: 10}, %{col_idx: 2, condition_type: "TEXT_CONTAINS", user_entered_value: "test"})`
+* `GSS.Spreadsheet.set_basic_filter(pid, %{row_from: nil, row_to: nil, col_from: nil, col_to: nil}, %{})`
+* `GSS.Spreadsheet.clear_basic_filter(pid)`
+* `GSS.Spreadsheet.freeze_header(pid, %{dim: :row, n_freeze: 1})`
+* `GSS.Spreadsheet.freeze_header(pid, %{dim: :col, n_freeze: 2})`
+* `GSS.Spreadsheet.update_col_width(pid, %{col_idx: 1, col_width: 200})`
+* `GSS.Spreadsheet.add_number_format(pid, %{row_from: 0, row_to: nil, col_from: 3, col_to: 4}, %{type: "NUMBER", pattern: "#0.0%"})`
+* `GSS.Spreadsheet.update_col_wrap(pid, %{row_from: 0, row_to: nil, col_from: 5, col_to: 7}, %{wrap_strategy: "clip"})`
+* `GSS.Spreadsheet.set_font(pid, %{row_from: nil, row_to: nil, col_from: nil, col_to: nil}, %{font_family: "Source Code Pro"})`
+* `GSS.Spreadsheet.add_conditional_format(pid, %{row_from: nil, row_to: nil, col_from: nil, col_to: nil}, %{formula: "=$E1=\"TEST\"", color_map: %{red: 1, green: 0.8, blue: 0.8}})`
+* `GSS.Spreadsheet.update_border(pid, %{row_from: 0, row_to: 10, col_from: 2, col_to: 5}, %{top: %{red: 1, style: "dashed"}, bottom: %{green: 1, blue: 0.7}, left: %{blue: 0.8, alpha: 0.75}})`
 
 Last function param of `GSS.Spreadsheet` function calls support the same `Keyword` options (in snake_case instead of camelCase), as defined in [Google API Docs](https://developers.google.com/sheets/reference/rest/v4/spreadsheets.values).
 
