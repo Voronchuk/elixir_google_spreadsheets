@@ -48,7 +48,7 @@ defmodule GSS.Spreadsheet do
 
   @impl true
   def handle_continue({:load_sheet_id, _opts}, %{list_name: nil} = state), do: {:noreply, state}
-  def handle_continue({:load_sheet_id, opts}, %{spreadsheet_id: spreadsheet_id, list_name: list_name} = state) do
+  def handle_continue({:load_sheet_id, _opts}, %{spreadsheet_id: spreadsheet_id, list_name: list_name} = state) do
     with {:json, %{"sheets" => sheets}} <- spreadsheet_query(:get, spreadsheet_id) do
       Enum.filter(sheets, fn %{"properties" => %{"title" => title}} -> title == list_name end)
       |> Enum.map(fn %{"properties" => %{"sheetId" => sheet_id}} -> sheet_id end)

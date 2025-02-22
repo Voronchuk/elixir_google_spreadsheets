@@ -7,7 +7,7 @@ defmodule GSS.Mixfile do
       version: "0.4.0",
       elixir: "~> 1.17",
       description: "Elixir library to read and write data of Google Spreadsheets.",
-      docs: [extras: ["README.md"]],
+      docs: [main: "GSS", extras: ["README.md"]],
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       package: package(),
@@ -28,7 +28,7 @@ defmodule GSS.Mixfile do
 
   def application do
     [
-      applications: [
+      extra_applications: [
         :logger,
         :goth,
         :gen_stage
