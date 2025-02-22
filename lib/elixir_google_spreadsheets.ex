@@ -15,6 +15,7 @@ defmodule GSS do
 
     children = [
       {Goth, name: GSS.Goth, source: source},
+      {Finch, name: GSS.Finch},
       {GSS.Registry, []},
       {GSS.Spreadsheet.Supervisor, []},
       {GSS.Client.Supervisor, []}
