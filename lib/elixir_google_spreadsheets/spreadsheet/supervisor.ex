@@ -33,14 +33,7 @@ defmodule GSS.Spreadsheet.Supervisor do
         }
 
         {:ok, pid} = DynamicSupervisor.start_child(__MODULE__, spec)
-
-        {:ok, nil} = GSS.Spreadsheet.add_sheet_id_to_state(pid)
-
-        {:ok, sheet_id} = GSS.Spreadsheet.get_sheet_id(pid)
-
-        new_opts = Keyword.put(opts, :sheet_id, sheet_id)
-        :ok = GSS.Registry.new_spreadsheet(spreadsheet_id, pid, new_opts)
-
+        :ok = GSS.Registry.new_spreadsheet(spreadsheet_id, pid, opts)
         {:ok, pid}
     end
   end

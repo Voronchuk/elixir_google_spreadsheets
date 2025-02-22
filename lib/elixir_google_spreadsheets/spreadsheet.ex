@@ -36,38 +36,53 @@ defmodule GSS.Spreadsheet do
     GenServer.start_link(__MODULE__, {spreadsheet_id, opts}, Keyword.take(opts, [:name]))
   end
 
+  @impl true
   @spec init({String.t(), Keyword.t()}) :: {:ok, state}
   def init({spreadsheet_id, opts}) do
-    {:ok, %{spreadsheet_id: spreadsheet_id, list_name: Keyword.get(opts, :list_name)}}
+    {:ok, %{
+      spreadsheet_id: spreadsheet_id,
+      sheet_id: nil,
+      list_name: Keyword.get(opts, :list_name)
+    }, {:continue, {:load_sheet_id, opts}}}
+  end
+
+  @impl true
+  def handle_continue({:load_sheet_id, _opts}, %{list_name: nil} = state), do: {:noreply, state}
+  def handle_continue({:load_sheet_id, opts}, %{spreadsheet_id: spreadsheet_id, list_name: list_name} = state) do
+    with {:json, %{"sheets" => sheets}} <- spreadsheet_query(:get, spreadsheet_id) do
+      Enum.filter(sheets, fn %{"properties" => %{"title" => title}} -> title == list_name end)
+      |> Enum.map(fn %{"properties" => %{"sheetId" => sheet_id}} -> sheet_id end)
+      |> case do
+        [sheet_id] ->
+          {:noreply, Map.put(state, :sheet_id, sheet_id)}
+
+        _ ->
+          {:stop, "sheet list not found #{list_name}", state}
+      end
+    else
+      {:error, exception} ->
+        Logger.error "[#{__MODULE__}] failed to load sheet id: #{inspect(exception)}"
+        {:stop, "failed to load sheet id", state}
+    end
   end
 
   @doc """
   Get spreadsheet internal id.
   """
   @spec id(pid) :: String.t()
-  def id(pid) do
-    GenServer.call(pid, :id)
-  end
+  def id(pid), do: GenServer.call(pid, :id)
 
   @doc """
   Get spreadsheet properties.
   """
   @spec properties(pid) :: map()
-  def properties(pid) do
-    GenServer.call(pid, :properties)
-  end
+  def properties(pid), do: GenServer.call(pid, :properties)
 
   @doc """
   Get sheet id associated with list_name in state.
   """
   @spec get_sheet_id(pid) :: {:ok, integer()}
   def get_sheet_id(pid), do: GenServer.call(pid, :get_sheet_id)
-
-  @doc """
-  Add the sheet id associated with the list_name to the state.
-  """
-  @spec add_sheet_id_to_state(pid) :: {:ok, nil}
-  def add_sheet_id_to_state(pid), do: {:ok, nil} = GenServer.call(pid, :add_sheet_id_to_state)
 
   @doc """
   Get spreadsheet sheets from properties.
@@ -383,6 +398,7 @@ defmodule GSS.Spreadsheet do
 
   # Get spreadsheet id stored in this state.
   # Used mainly for testing purposes.
+  @impl true
   def handle_call(:id, _from, %{spreadsheet_id: spreadsheet_id} = state) do
     {:reply, spreadsheet_id, state}
   end
@@ -402,30 +418,12 @@ defmodule GSS.Spreadsheet do
 
   # Get the sheet id from state.
   # Used mainly in Spreadsheet.Supervisor.spreadsheet/2.
-  def handle_call(:get_sheet_id, _from, %{sheet_id: sheet_id} = state) when is_nil(sheet_id) do
+  def handle_call(:get_sheet_id, _from, %{sheet_id: nil} = state) do
     {:reply, {:ok, nil}, state}
   end
 
   def handle_call(:get_sheet_id, _from, %{sheet_id: sheet_id} = state) do
     {:reply, {:ok, sheet_id}, state}
-  end
-
-  # Add the sheet id associated with the list_name to the state.
-  def handle_call(:add_sheet_id_to_state, _from, %{list_name: list_name} = state)
-      when is_nil(list_name) do
-    {:reply, {:ok, nil}, state}
-  end
-
-  def handle_call(:add_sheet_id_to_state, from, %{list_name: list_name} = state) do
-    with {:reply, {:ok, %{"sheets" => sheets}}, state} <- handle_call(:properties, from, state) do
-      [sheet_id] =
-        Enum.filter(sheets, fn %{"properties" => %{"title" => title}} -> title == list_name end)
-        |> Enum.map(fn %{"properties" => %{"sheetId" => sheet_id}} -> sheet_id end)
-
-      {:reply, {:ok, nil}, Map.put(state, :sheet_id, sheet_id)}
-    else
-      {:error, exception} -> {:reply, {:error, exception}, state}
-    end
   end
 
   # Get total number of rows from spreadsheets.
@@ -986,11 +984,11 @@ defmodule GSS.Spreadsheet do
       {:json, json}
     else
       {:ok, %{status: status, body: body}} when status != 200 ->
-        Logger.error("Google API returned status code: #{status}. Body: #{body}")
+        Logger.error("[#{__MODULE__}] Google API returned status code: #{status}. Body: #{body}")
         {:error, %GSS.GoogleApiError{message: "invalid google API status code #{status}"}}
 
       {:error, reason} ->
-        Logger.error("Spreadsheet query: #{inspect(reason)}")
+        Logger.error("[#{__MODULE__}] spreadsheet query: #{inspect(reason)}")
         {:error, %GSS.GoogleApiError{message: "invalid google API response #{inspect(reason)}"}}
     end
   end

@@ -55,7 +55,6 @@ Sample operations:
 * `GSS.Spreadsheet.id(pid)`
 * `GSS.Spreadsheet.properties(pid)`
 * `GSS.Spreadsheet.get_sheet_id(pid)`
-* `GSS.Spreadsheet.add_sheet_id_to_state(pid)`
 * `GSS.Spreadsheet.sheets(pid)`
 * `GSS.Spreadsheet.rows(pid)`
 * `GSS.Spreadsheet.update_sheet_size(pid, 10, 5)`
