@@ -11,8 +11,8 @@ defmodule GSS.Client do
     @type t :: %__MODULE__{
             method: atom(),
             url: binary(),
-            body: HTTPoison.body(),
-            headers: HTTPoison.headers(),
+            body: binary() | iodata(),
+            headers: [{binary(), binary()}],
             options: Keyword.t()
           }
     defstruct method: nil, url: nil, body: "", headers: [], options: []
@@ -26,55 +26,48 @@ defmodule GSS.Client do
     GenStage.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
-  @doc ~S"""
-  Issues an HTTP request with the given method to the given url.
+  @doc """
+  Issues an HTTP request with the given method to the given URL using Finch.
 
-  This function is usually used indirectly by `get/3`, `post/4`, `put/4`, etc
+  This function is usually used indirectly by helper functions such as `get/3`, `post/4`, `put/4`, etc.
 
-  Args:
-  * `method` - HTTP method as an atom (`:get`, `:head`, `:post`, `:put`,
-    `:delete`, etc.)
-  * `url` - target url as a binary string or char list
-  * `body` - request body. See more below
-  * `headers` - HTTP headers as an orddict (e.g., `[{"Accept", "application/json"}]`)
-  * `options` - Keyword list of options
+  ### Arguments
+  - **`method`**: HTTP method as an atom (e.g., `:get`, `:head`, `:post`, `:put`, `:delete`, etc.).
+  - **`url`**: Target URL as a binary string.
+  - **`body`**: Request body, which can be a binary, char list, or iodata. Special forms include:
+    - `{:form, [{K, V}, ...]}` – to send a form URL-encoded payload.
+    - `{:file, "/path/to/file"}` – to send a file.
+    - `{:stream, enumerable}` – to lazily send a stream of binaries/char lists.
+  - **`headers`**: HTTP headers as a list of two-element tuples (e.g., `[{"Accept", "application/json"}]`).
+  - **`options`**: A keyword list of Finch options. Supported options include:
+    - **`:timeout`** – Timeout (in milliseconds) for establishing a connection (default is 8000).
+    - **`:recv_timeout`** – Timeout (in milliseconds) for receiving data (default is 5000).
+    - **`:proxy`** – A proxy for the request; either a URL or a `{host, port}` tuple.
+    - **`:proxy_auth`** – Proxy authentication credentials as `{user, password}`.
+    - **`:ssl`** – SSL options as supported by Erlang’s `ssl` module.
+    - **`:follow_redirect`** – Boolean to indicate if redirects should be followed.
+    - **`:max_redirect`** – Maximum number of redirects to follow.
+    - **`:params`** – Enumerable of two-item tuples to be appended to the URL as query string parameters.
+    - Any other Finch-supported options can also be provided.
 
-  Body:
-  * binary, char list or an iolist
-  * `{:form, [{K, V}, ...]}` - send a form url encoded
-  * `{:file, ~s(/path/to/file)}` - send a file
-  * `{:stream, enumerable}` - lazily send a stream of binaries/charlists
+  Timeout values can be specified as an integer or as `:infinity`.
 
-  Options:
-  * `:result_timeout` - receive result timeout, in milliseconds. Default is 2 minutes
-  * `:timeout` - timeout to establish a connection, in milliseconds. Default is 8000
-  * `:recv_timeout` - timeout used when receiving a connection. Default is 5000
-  * `:proxy` - a proxy to be used for the request; it can be a regular url
-    or a `{Host, Port}` tuple
-  * `:proxy_auth` - proxy authentication `{User, Password}` tuple
-  * `:ssl` - SSL options supported by the `ssl` erlang module
-  * `:follow_redirect` - a boolean that causes redirects to be followed
-  * `:max_redirect` - an integer denoting the maximum number of redirects to follow
-  * `:params` - an enumerable consisting of two-item tuples that will be appended to the url as query string parameters
+  ### Returns
+  - On success, returns `{:ok, %Finch.Response{}}`.
+  - On failure, returns `{:error, reason}` where `reason` is an exception.
 
-  Timeouts can be an integer or `:infinity`
+  ### Examples
 
-  This function returns `{:ok, response}` or `{:ok, async_response}` if the
-  request is successful, `{:error, reason}` otherwise.
-
-  ## Examples
-
-    request(:post, ~s(https://my.website.com), ~s({\"foo\": 3}), [{"Accept", "application/json"}])
-
+      request(:post, "https://my.website.com", "{\"foo\": 3}", [{"Accept", "application/json"}])
   """
-  @spec request(atom, binary, HTTPoison.body(), HTTPoison.headers(), Keyword.t()) ::
-          {:ok, HTTPoison.Response.t()} | {:error, binary} | no_return
+  @spec request(atom, binary, binary() | iodata(), [{binary(), binary()}], Keyword.t()) ::
+    {:ok, Finch.Response.t()} | {:error, Exception.t()}
   def request(method, url, body \\ "", headers \\ [], options \\ []) do
     request = %RequestParams{
       method: method,
-      url: url,
+      url: safe_encode_url(url),
       body: body,
-      headers: headers,
+      headers: maybe_parse_headers(headers),
       options: options
     }
 
@@ -82,15 +75,15 @@ defmodule GSS.Client do
       nil ->
         GenStage.call(__MODULE__, {:request, request})
 
-      result_timeout ->
-        GenStage.call(__MODULE__, {:request, request}, result_timeout)
+      recv_timeout ->
+        GenStage.call(__MODULE__, {:request, request}, recv_timeout)
     end
   end
 
-  @doc ~S"""
+  @doc """
   Starts a task with request that must be awaited on.
   """
-  @spec request_async(atom, binary, HTTPoison.body(), HTTPoison.headers(), Keyword.t()) ::
+  @spec request_async(atom, binary, binary() | iodata(), [{binary(), binary()}], Keyword.t()) ::
           Task.t()
   def request_async(method, url, body \\ "", headers \\ [], options \\ []) do
     Task.async(GSS.Client, :request, [method, url, body, headers, options])
@@ -105,7 +98,7 @@ defmodule GSS.Client do
     {:producer, :queue.new(), dispatcher: dispatcer}
   end
 
-  @doc ~S"""
+  @doc """
   Divide request into to partitions :read and :write
   """
   @spec dispatcher_hash(event) :: {event, partition()}
@@ -116,7 +109,7 @@ defmodule GSS.Client do
     end
   end
 
-  @doc ~S"""
+  @doc """
   Adds an event to the queue
   """
   def handle_call({:request, request}, from, queue) do
@@ -124,7 +117,7 @@ defmodule GSS.Client do
     {:noreply, [], updated_queue}
   end
 
-  @doc ~S"""
+  @doc """
   Gives events for the next stage to process when requested
   """
   def handle_demand(demand, queue) when demand > 0 do
@@ -154,5 +147,15 @@ defmodule GSS.Client do
       {:empty, queue} ->
         take_from_queue(queue, 0, events)
     end
+  end
+
+  defp safe_encode_url(url) do
+    # Replace spaces with %20 while leaving colons and other reserved characters intact.
+    String.replace(url, " ", "%20")
+  end
+
+  defp maybe_parse_headers(headers) when is_list(headers), do: headers
+  defp maybe_parse_headers(%{} = headers) do
+    Enum.reduce(headers, [], fn {k, v}, acc -> [{k, v} | acc] end)
   end
 end

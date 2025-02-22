@@ -17,7 +17,7 @@ defmodule GSS.Client.Request do
 
   @doc """
   Starts an request worker linked to the current process.
-  Takes events from Limiter and send requests through HTTPoison
+  Takes events from Limiter and send requests through Finch
 
   ## Options
   * `:name` - used for name registration as described in the "Name registration" section of the module documentation. Default is `#{
@@ -55,7 +55,7 @@ defmodule GSS.Client.Request do
     {:noreply, [], state}
   end
 
-  @spec send_request(RequestParams.t()) :: {:ok, HTTPoison.Response.t()} | {:error, binary()}
+  @spec send_request(RequestParams.t()) :: {:ok, Finch.Response.t()} | {:error, Exception.t()}
   defp send_request(request) do
     %RequestParams{
       method: method,
@@ -67,18 +67,13 @@ defmodule GSS.Client.Request do
 
     Logger.debug("send_request #{url}")
 
-    try do
-      case HTTPoison.request(method, url, body, headers, options || []) do
-        {:ok, response} ->
-          {:ok, response}
+    finch_request = Finch.build(method, url, headers, body)
+    case Finch.request(finch_request, GSS.Finch, options || []) do
+      {:ok, response} ->
+        {:ok, response}
 
-        {:error, %HTTPoison.Error{reason: reason}} ->
-          Logger.error("Request poison error #{inspect(reason)}: #{inspect(request)}")
-          {:error, reason}
-      end
-    rescue
-      error ->
-        Logger.error("Request error exception #{inspect(error)}: #{inspect(request)}")
+      {:error, error} ->
+        Logger.error("Finch request error #{inspect(error)}: #{inspect(request)}")
         {:error, error}
     end
   end

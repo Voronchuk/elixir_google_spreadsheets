@@ -173,7 +173,7 @@ defmodule GSS.Spreadsheet do
           {:ok, [spreadsheet_data]} | {:error, atom}
   def read_rows(pid, row_index_start, row_index_end, options)
       when is_integer(row_index_start) and is_integer(row_index_end) and
-             row_index_start < row_index_end do
+             row_index_start <= row_index_end do
     gen_server_call(pid, {:read_rows, row_index_start, row_index_end, options}, options)
   end
 
@@ -974,23 +974,23 @@ defmodule GSS.Spreadsheet do
   defp spreadsheet_query_post_batch(url_suffix, request, _options) do
     headers = %{"Authorization" => "Bearer #{GSS.Registry.token()}"}
     params = get_request_params()
-    body = Poison.encode!(request)
+    body = Jason.encode!(request)
     response = Client.request(:post, @api_url_spreadsheet <> url_suffix, body, headers, params)
     spreadsheet_query_response(response)
   end
 
-  @spec spreadsheet_query_response({:ok | :error, %HTTPoison.Response{}}) :: spreadsheet_response
+  @spec spreadsheet_query_response({:ok, Finch.Response.t()} | {:error, Exception.t()}) :: spreadsheet_response
   defp spreadsheet_query_response(response) do
-    with {:ok, %{status_code: 200, body: body}} <- response,
-         {:ok, json} <- Poison.decode(body) do
+    with {:ok, %{status: 200, body: body}} <- response,
+         {:ok, json} <- Jason.decode(body) do
       {:json, json}
     else
-      {:ok, %{status_code: status_code, body: body}} when status_code != 200 ->
-        Logger.error("Google API returned status code: #{status_code}. Body: #{body}")
-        {:error, %GSS.GoogleApiError{message: "invalid google API status code #{status_code}"}}
+      {:ok, %{status: status, body: body}} when status != 200 ->
+        Logger.error("Google API returned status code: #{status}. Body: #{body}")
+        {:error, %GSS.GoogleApiError{message: "invalid google API status code #{status}"}}
 
       {:error, reason} ->
-        Logger.error(fn -> "Spreadsheet query: #{inspect(reason)}" end)
+        Logger.error("Spreadsheet query: #{inspect(reason)}")
         {:error, %GSS.GoogleApiError{message: "invalid google API response #{inspect(reason)}"}}
     end
   end
@@ -1001,7 +1001,7 @@ defmodule GSS.Spreadsheet do
     major_dimension = Keyword.get(options, :major_dimension, "ROWS")
     wrap_data = Keyword.get(options, :wrap_data, true)
 
-    Poison.encode!(%{
+    Jason.encode!(%{
       range: range,
       majorDimension: major_dimension,
       values: if(wrap_data, do: [data], else: data)
@@ -1114,21 +1114,7 @@ defmodule GSS.Spreadsheet do
 
   @spec get_request_params() :: Keyword.t()
   defp get_request_params do
-    params = Client.config(:request_opts, [])
-    Keyword.merge(params, [
-      ssl: [
-        versions: [:"tlsv1.2"],
-        verify: :verify_peer,
-        depth: 99,
-        cacerts: :certifi.cacerts(),
-        customize_hostname_check: [
-          match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
-        ],
-        reuse_sessions: false,
-        crl_check: true,
-        crl_cache: {:ssl_crl_cache, {:internal, [http: 30000]}}
-      ]
-    ])
+    Client.config(:request_opts, [])
   end
 
   defp gen_server_call(pid, tuple, options) do
