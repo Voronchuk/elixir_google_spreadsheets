@@ -125,9 +125,9 @@ defmodule GSS.Spreadsheet do
   * `:dimension_index` - Column to sort by (default: 0)
   * `:sort_order` - "ASCENDING" or "DESCENDING" (default: "ASCENDING")
   """
-  @spec sort!(pid, integer, keyword()) :: :ok | {:error, Exception.t()}
-  def sort!(pid, row_count, options \\ []) do
-    GenServer.call(pid, {:sort!, row_count, options})
+  @spec sort(pid, integer, keyword()) :: :ok | {:error, Exception.t()}
+  def sort(pid, row_count, options \\ []) do
+    GenServer.call(pid, {:sort, row_count, options})
   end
 
   @spec update_sheet_size(pid, integer(), integer(), Keyword.t()) ::
@@ -480,7 +480,7 @@ defmodule GSS.Spreadsheet do
   end
 
   # Sort the spreadsheet
-  def handle_call({:sort!, row_count, options}, _from, %{spreadsheet_id: spreadsheet_id} = state) do
+  def handle_call({:sort, row_count, options}, _from, %{spreadsheet_id: spreadsheet_id} = state) do
     url_suffix = "#{spreadsheet_id}:batchUpdate"
 
     sheet_id = Keyword.get(options, :sheet_id, 0)

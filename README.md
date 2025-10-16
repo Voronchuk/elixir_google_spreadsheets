@@ -80,6 +80,7 @@ Sample operations:
 * `GSS.Spreadsheet.set_font(pid, %{row_from: nil, row_to: nil, col_from: nil, col_to: nil}, %{font_family: "Source Code Pro"})`
 * `GSS.Spreadsheet.add_conditional_format(pid, %{row_from: nil, row_to: nil, col_from: nil, col_to: nil}, %{formula: "=$E1=\"TEST\"", color_map: %{red: 1, green: 0.8, blue: 0.8}})`
 * `GSS.Spreadsheet.update_border(pid, %{row_from: 0, row_to: 10, col_from: 2, col_to: 5}, %{top: %{red: 1, style: "dashed"}, bottom: %{green: 1, blue: 0.7}, left: %{blue: 0.8, alpha: 0.75}})`
+* `GSS.Spreadsheet.sort(pid, 100, end_column_index: 5, sort_order: "ASCENDING")`
 
 Last function param of `GSS.Spreadsheet` function calls support the same `Keyword` options (in snake_case instead of camelCase), as defined in [Google API Docs](https://developers.google.com/sheets/reference/rest/v4/spreadsheets.values).
 
