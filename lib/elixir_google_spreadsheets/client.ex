@@ -34,23 +34,15 @@ defmodule GSS.Client do
   ### Arguments
   - **`method`**: HTTP method as an atom (e.g., `:get`, `:head`, `:post`, `:put`, `:delete`, etc.).
   - **`url`**: Target URL as a binary string.
-  - **`body`**: Request body, which can be a binary, char list, or iodata. Special forms include:
-    - `{:form, [{K, V}, ...]}` – to send a form URL-encoded payload.
-    - `{:file, "/path/to/file"}` – to send a file.
-    - `{:stream, enumerable}` – to lazily send a stream of binaries/char lists.
+  - **`body`**: Request body as a `binary()` or `iodata()`.
   - **`headers`**: HTTP headers as a list of two-element tuples (e.g., `[{"Accept", "application/json"}]`).
-  - **`options`**: A keyword list of Finch options. Supported options include:
-    - **`:timeout`** – Timeout (in milliseconds) for establishing a connection (default is 8000).
-    - **`:recv_timeout`** – Timeout (in milliseconds) for receiving data (default is 5000).
-    - **`:proxy`** – A proxy for the request; either a URL or a `{host, port}` tuple.
-    - **`:proxy_auth`** – Proxy authentication credentials as `{user, password}`.
-    - **`:ssl`** – SSL options as supported by Erlang’s `ssl` module.
-    - **`:follow_redirect`** – Boolean to indicate if redirects should be followed.
-    - **`:max_redirect`** – Maximum number of redirects to follow.
-    - **`:params`** – Enumerable of two-item tuples to be appended to the URL as query string parameters.
-    - Any other Finch-supported options can also be provided.
-
-  Timeout values can be specified as an integer or as `:infinity`.
+  - **`options`**: A keyword list of options.
+    - **`:result_timeout`** – timeout (in milliseconds) for the underlying `GenStage.call/3`.
+      This key is consumed by the library and is not forwarded to Finch. When omitted it falls
+      back to the `:result_timeout` client config. May be an integer or `:infinity`.
+    - **`:pool_timeout`**, **`:receive_timeout`**, **`:request_timeout`** – forwarded to
+      `Finch.request/3` (see the `Finch` documentation for their semantics). Any other keys are
+      ignored by the request worker.
 
   ### Returns
   - On success, returns `{:ok, %Finch.Response{}}`.
@@ -61,7 +53,7 @@ defmodule GSS.Client do
       request(:post, "https://my.website.com", "{\"foo\": 3}", [{"Accept", "application/json"}])
   """
   @spec request(atom, binary, binary() | iodata(), [{binary(), binary()}], Keyword.t()) ::
-    {:ok, Finch.Response.t()} | {:error, Exception.t()}
+          {:ok, Finch.Response.t()} | {:error, Exception.t()}
   def request(method, url, body \\ "", headers \\ [], options \\ []) do
     request = %RequestParams{
       method: method,
@@ -91,11 +83,12 @@ defmodule GSS.Client do
 
   ## Callbacks
 
+  @impl true
   def init(:ok) do
-    dispatcer =
+    dispatcher =
       {GenStage.PartitionDispatcher, partitions: [:write, :read], hash: &dispatcher_hash/1}
 
-    {:producer, :queue.new(), dispatcher: dispatcer}
+    {:producer, :queue.new(), dispatcher: dispatcher}
   end
 
   @doc """
@@ -109,17 +102,13 @@ defmodule GSS.Client do
     end
   end
 
-  @doc """
-  Adds an event to the queue
-  """
+  @impl true
   def handle_call({:request, request}, from, queue) do
     updated_queue = :queue.in({:request, from, request}, queue)
     {:noreply, [], updated_queue}
   end
 
-  @doc """
-  Gives events for the next stage to process when requested
-  """
+  @impl true
   def handle_demand(demand, queue) when demand > 0 do
     {events, updated_queue} = take_from_queue(queue, demand, [])
     {:noreply, Enum.reverse(events), updated_queue}
@@ -130,7 +119,7 @@ defmodule GSS.Client do
   """
   @spec config(atom(), any()) :: any()
   def config(key, default \\ nil) do
-    Application.get_env(:elixir_google_spreadsheets, :client)
+    Application.get_env(:elixir_google_spreadsheets, :client, [])
     |> Keyword.get(key, default)
   end
 
@@ -155,6 +144,7 @@ defmodule GSS.Client do
   end
 
   defp maybe_parse_headers(headers) when is_list(headers), do: headers
+
   defp maybe_parse_headers(%{} = headers) do
     Enum.reduce(headers, [], fn {k, v}, acc -> [{k, v} | acc] end)
   end

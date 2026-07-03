@@ -33,18 +33,19 @@ defmodule GSS.Client.Request do
 
   ## Callbacks
 
+  @impl true
   def init(args) do
     Logger.debug("Request init: #{inspect(args)}")
     {:consumer, :ok, subscribe_to: args[:limiters]}
   end
 
-  @doc ~S"""
-  Set the subscription to manual to control when to ask for events
-  """
+  @impl true
+  # Set the subscription to manual to control when to ask for events
   def handle_subscribe(:producer, _options, _from, state) do
     {:automatic, state}
   end
 
+  @impl true
   @spec handle_events([Client.event()], GenStage.from(), state()) :: {:noreply, [], state()}
   def handle_events([{:request, from, request}], _from, state) do
     Logger.debug("Request handle events: #{inspect(request)}")

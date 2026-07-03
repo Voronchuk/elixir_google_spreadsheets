@@ -6,33 +6,38 @@ defmodule GSS.Client.Supervisor do
   use Supervisor
   alias GSS.{Client, Client.Limiter, Client.Request}
 
-  @spec start_link(any()) :: {:ok, pid}
-  def start_link(_args \\ []), do: init([])
+  @spec start_link(any()) :: Supervisor.on_start()
+  def start_link(arg \\ []) do
+    Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
+  end
 
-  def init([]) do
-    config = Application.fetch_env!(:elixir_google_spreadsheets, :client)
+  @impl true
+  def init(_arg) do
+    config = Application.get_env(:elixir_google_spreadsheets, :client, [])
     limiter_args = Keyword.take(config, [:max_demand, :interval, :max_interval])
 
     children = [
       {Client, []},
       %{
         id: Limiter.Writer,
-        start: {Limiter, :start_link,
-        [
-          limiter_args
-          |> Keyword.put(:clients, [{Client, partition: :write}])
-          |> Keyword.put(:name, Limiter.Writer)
-        ]}
+        start:
+          {Limiter, :start_link,
+           [
+             limiter_args
+             |> Keyword.put(:clients, [{Client, partition: :write}])
+             |> Keyword.put(:name, Limiter.Writer)
+           ]}
       },
       %{
         id: Limiter.Reader,
-        start: {Limiter, :start_link,
-        [
-          limiter_args
-          |> Keyword.put(:partition, :read)
-          |> Keyword.put(:clients, [{Client, partition: :read}])
-          |> Keyword.put(:name, Limiter.Reader)
-        ]}
+        start:
+          {Limiter, :start_link,
+           [
+             limiter_args
+             |> Keyword.put(:partition, :read)
+             |> Keyword.put(:clients, [{Client, partition: :read}])
+             |> Keyword.put(:name, Limiter.Reader)
+           ]}
       }
     ]
 
@@ -47,6 +52,6 @@ defmodule GSS.Client.Supervisor do
         }
       end
 
-    Supervisor.start_link(children ++ request_workers, [strategy: :one_for_one, name: __MODULE__])
+    Supervisor.init(children ++ request_workers, strategy: :one_for_one)
   end
 end

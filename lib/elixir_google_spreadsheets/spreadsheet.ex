@@ -27,9 +27,9 @@ defmodule GSS.Spreadsheet do
 
   @api_url_spreadsheet "https://sheets.googleapis.com/v4/spreadsheets/"
 
-  @max_rows GSS.config(:max_rows_per_request, 301)
-  @default_column_from GSS.config(:default_column_from, 1)
-  @default_column_to GSS.config(:default_column_to, 26)
+  defp max_rows, do: GSS.config(:max_rows_per_request, 301)
+  defp default_column_from, do: GSS.config(:default_column_from, 1)
+  defp default_column_to, do: GSS.config(:default_column_to, 26)
 
   @spec start_link(String.t(), Keyword.t()) :: {:ok, pid}
   def start_link(spreadsheet_id, opts) do
@@ -39,16 +39,21 @@ defmodule GSS.Spreadsheet do
   @impl true
   @spec init({String.t(), Keyword.t()}) :: {:ok, state}
   def init({spreadsheet_id, opts}) do
-    {:ok, %{
-      spreadsheet_id: spreadsheet_id,
-      sheet_id: nil,
-      list_name: Keyword.get(opts, :list_name)
-    }, {:continue, {:load_sheet_id, opts}}}
+    {:ok,
+     %{
+       spreadsheet_id: spreadsheet_id,
+       sheet_id: nil,
+       list_name: Keyword.get(opts, :list_name)
+     }, {:continue, {:load_sheet_id, opts}}}
   end
 
   @impl true
   def handle_continue({:load_sheet_id, _opts}, %{list_name: nil} = state), do: {:noreply, state}
-  def handle_continue({:load_sheet_id, _opts}, %{spreadsheet_id: spreadsheet_id, list_name: list_name} = state) do
+
+  def handle_continue(
+        {:load_sheet_id, _opts},
+        %{spreadsheet_id: spreadsheet_id, list_name: list_name} = state
+      ) do
     with {:json, %{"sheets" => sheets}} <- spreadsheet_query(:get, spreadsheet_id) do
       Enum.filter(sheets, fn %{"properties" => %{"title" => title}} -> title == list_name end)
       |> Enum.map(fn %{"properties" => %{"sheetId" => sheet_id}} -> sheet_id end)
@@ -61,7 +66,7 @@ defmodule GSS.Spreadsheet do
       end
     else
       {:error, exception} ->
-        Logger.error "[#{__MODULE__}] failed to load sheet id: #{inspect(exception)}"
+        Logger.error("[#{__MODULE__}] failed to load sheet id: #{inspect(exception)}")
         {:stop, "failed to load sheet id", state}
     end
   end
@@ -146,7 +151,8 @@ defmodule GSS.Spreadsheet do
   Append row in a spreadsheet after an index.
   """
   @spec append_row(pid, integer(), spreadsheet_data, Keyword.t()) :: :ok
-  def append_row(pid, row_index, [cell | _] = column_list, options \\ []) when is_binary(cell) or is_nil(cell) do
+  def append_row(pid, row_index, [cell | _] = column_list, options \\ [])
+      when is_binary(cell) or is_nil(cell) do
     gen_server_call(pid, {:append_rows, row_index, [column_list], options}, options)
   end
 
@@ -487,8 +493,8 @@ defmodule GSS.Spreadsheet do
     value_render_option = Keyword.get(options, :value_render_option, "FORMATTED_VALUE")
     datetime_render_option = Keyword.get(options, :datetime_render_option, "FORMATTED_STRING")
 
-    column_from = Keyword.get(options, :column_from, @default_column_from)
-    column_to = Keyword.get(options, :column_to, @default_column_to)
+    column_from = Keyword.get(options, :column_from, default_column_from())
+    column_to = Keyword.get(options, :column_to, default_column_to())
     range = range(row_index, row_index, column_from, column_to)
 
     query =
@@ -583,8 +589,8 @@ defmodule GSS.Spreadsheet do
         _from,
         %{spreadsheet_id: spreadsheet_id} = state
       ) do
-    column_from = Keyword.get(options, :column_from, @default_column_from)
-    column_to = Keyword.get(options, :column_to, @default_column_to)
+    column_from = Keyword.get(options, :column_from, default_column_from())
+    column_to = Keyword.get(options, :column_to, default_column_to())
     range = range(row_index, row_index, column_from, column_to)
     query = "#{spreadsheet_id}/values/#{maybe_attach_list(state)}#{range}:clear"
 
@@ -599,8 +605,8 @@ defmodule GSS.Spreadsheet do
 
   # Get column value list for specific row from a spreadsheet.
   def handle_call({:read_rows, [row | _] = rows, options}, from, state) when is_integer(row) do
-    column_from = Keyword.get(options, :column_from, @default_column_from)
-    column_to = Keyword.get(options, :column_to, @default_column_to)
+    column_from = Keyword.get(options, :column_from, default_column_from())
+    column_to = Keyword.get(options, :column_to, default_column_to())
 
     ranges =
       Enum.map(rows, fn row_index ->
@@ -643,8 +649,8 @@ defmodule GSS.Spreadsheet do
   end
 
   def handle_call({:read_rows, row_index_start, row_index_end, options}, from, state) do
-    column_from = Keyword.get(options, :column_from, @default_column_from)
-    column_to = Keyword.get(options, :column_to, @default_column_to)
+    column_from = Keyword.get(options, :column_from, default_column_from())
+    column_to = Keyword.get(options, :column_to, default_column_to())
 
     options =
       if Keyword.get(options, :batch_range, true) do
@@ -688,8 +694,8 @@ defmodule GSS.Spreadsheet do
   end
 
   def handle_call({:clear_rows, row_index_start, row_index_end, options}, from, state) do
-    column_from = Keyword.get(options, :column_from, @default_column_from)
-    column_to = Keyword.get(options, :column_to, @default_column_to)
+    column_from = Keyword.get(options, :column_from, default_column_from())
+    column_to = Keyword.get(options, :column_to, default_column_to())
 
     ranges =
       Enum.map(row_index_start..row_index_end, fn row_index ->
@@ -977,7 +983,8 @@ defmodule GSS.Spreadsheet do
     spreadsheet_query_response(response)
   end
 
-  @spec spreadsheet_query_response({:ok, Finch.Response.t()} | {:error, Exception.t()}) :: spreadsheet_response
+  @spec spreadsheet_query_response({:ok, Finch.Response.t()} | {:error, Exception.t()}) ::
+          spreadsheet_response
   defp spreadsheet_query_response(response) do
     with {:ok, %{status: 200, body: body}} <- response,
          {:ok, json} <- JSON.decode(body) do
@@ -1008,7 +1015,12 @@ defmodule GSS.Spreadsheet do
 
   @spec range(integer(), integer(), integer(), integer()) :: String.t()
   def range(row_from, row_to, column_from, column_to)
-      when row_from <= row_to and column_from <= column_to and row_to - row_from < @max_rows do
+      when row_from <= row_to and column_from <= column_to do
+    if row_to - row_from >= max_rows() do
+      raise GSS.InvalidRange,
+        message: "Max rows #{max_rows()}, `to` value should be greater than `from`"
+    end
+
     column_from_letters = col_number_to_letters(column_from)
     column_to_letters = col_number_to_letters(column_to)
     "#{column_from_letters}#{row_from}:#{column_to_letters}#{row_to}"
@@ -1016,7 +1028,7 @@ defmodule GSS.Spreadsheet do
 
   def range(_, _, _, _) do
     raise GSS.InvalidRange,
-      message: "Max rows #{@max_rows}, `to` value should be greater than `from`"
+      message: "Max rows #{max_rows()}, `to` value should be greater than `from`"
   end
 
   @spec range(integer(), integer(), integer(), integer(), state) :: String.t()

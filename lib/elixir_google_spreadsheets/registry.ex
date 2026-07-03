@@ -49,7 +49,7 @@ defmodule GSS.Registry do
   end
 
   @doc """
-  Fetch Google Spreadsheet proccess by it's id in the registry.
+  Fetch Google Spreadsheet process by it's id in the registry.
   """
   @spec spreadsheet_pid(String.t(), Keyword.t()) :: pid | nil
   def spreadsheet_pid(spreadsheet_id, opts \\ []) do
