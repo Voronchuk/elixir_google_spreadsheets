@@ -24,6 +24,7 @@ defmodule GSS.Client do
   @type event :: {:request, GenStage.from(), RequestParams.t()}
   @type partition :: :write | :read
   @type response :: {:ok, Finch.Response.t()} | {:error, Exception.t()}
+  @type headers :: [{binary(), binary()}] | %{optional(binary()) => binary()}
 
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_args \\ []) do
@@ -56,7 +57,7 @@ defmodule GSS.Client do
 
       request(:post, "https://my.website.com", "{\"foo\": 3}", [{"Accept", "application/json"}])
   """
-  @spec request(atom, binary, binary() | iodata(), [{binary(), binary()}], Keyword.t()) ::
+  @spec request(atom, binary, binary() | iodata(), headers, Keyword.t()) ::
           {:ok, Finch.Response.t()} | {:error, Exception.t()}
   def request(method, url, body \\ "", headers \\ [], options \\ []) do
     request = %RequestParams{
@@ -79,7 +80,7 @@ defmodule GSS.Client do
   @doc """
   Starts a task with request that must be awaited on.
   """
-  @spec request_async(atom, binary, binary() | iodata(), [{binary(), binary()}], Keyword.t()) ::
+  @spec request_async(atom, binary, binary() | iodata(), headers, Keyword.t()) ::
           Task.t()
   def request_async(method, url, body \\ "", headers \\ [], options \\ []) do
     Task.async(GSS.Client, :request, [method, url, body, headers, options])

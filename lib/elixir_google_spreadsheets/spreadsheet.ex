@@ -36,7 +36,8 @@ defmodule GSS.Spreadsheet do
   end
 
   @impl true
-  @spec init({String.t(), Keyword.t()}) :: {:ok, state}
+  @spec init({String.t(), Keyword.t()}) ::
+          {:ok, state, {:continue, {:load_sheet_id, Keyword.t()}}}
   def init({spreadsheet_id, opts}) do
     {:ok,
      %{
