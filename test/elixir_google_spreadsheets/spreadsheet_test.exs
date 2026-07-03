@@ -7,8 +7,8 @@ defmodule GSS.SpreadsheetTest do
   @test_row3 ["7", "7", "8"]
   @test_row4 ["1", "4", "8", "4"]
 
-  setup context do
-    {:ok, pid} = GSS.Spreadsheet.Supervisor.spreadsheet(@test_spreadsheet_id, name: context.test)
+  setup do
+    {:ok, pid} = GSS.Spreadsheet.Supervisor.spreadsheet(@test_spreadsheet_id)
 
     on_exit(fn ->
       cleanup_table(pid)

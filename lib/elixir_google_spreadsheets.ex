@@ -12,7 +12,7 @@ defmodule GSS do
   def start(_type, _args) do
     children =
       [
-        {GSS.Registry, []},
+        {Registry, keys: :unique, name: GSS.Registry},
         {Finch, name: GSS.Finch},
         {GSS.Spreadsheet.Supervisor, []},
         {GSS.Client.Supervisor, []}

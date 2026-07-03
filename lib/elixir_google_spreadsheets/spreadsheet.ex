@@ -4,7 +4,7 @@ defmodule GSS.Spreadsheet do
   """
 
   require Logger
-  use GenServer
+  use GenServer, restart: :transient, shutdown: 5_000
   alias GSS.Client
 
   @typedoc """
@@ -31,8 +31,8 @@ defmodule GSS.Spreadsheet do
   defp default_column_from, do: GSS.config(:default_column_from, 1)
   defp default_column_to, do: GSS.config(:default_column_to, 26)
 
-  @spec start_link(String.t(), Keyword.t()) :: {:ok, pid}
-  def start_link(spreadsheet_id, opts) do
+  @spec start_link({String.t(), Keyword.t()}) :: {:ok, pid}
+  def start_link({spreadsheet_id, opts}) do
     GenServer.start_link(__MODULE__, {spreadsheet_id, opts}, Keyword.take(opts, [:name]))
   end
 

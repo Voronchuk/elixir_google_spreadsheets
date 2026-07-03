@@ -15,26 +15,22 @@ defmodule GSS.Spreadsheet.Supervisor do
     DynamicSupervisor.init(strategy: :one_for_one)
   end
 
-  @spec spreadsheet(String.t(), Keyword.t()) :: {:ok, pid}
+  @spec spreadsheet(String.t(), Keyword.t()) :: {:ok, pid} | {:error, term()}
   def spreadsheet(spreadsheet_id, opts \\ []) do
-    with \
-      pid when is_pid(pid) <- GSS.Registry.spreadsheet_pid(spreadsheet_id, opts),
-      true <- Process.alive?(pid)
-    do
-      {:ok, pid}
-    else
-      _ ->
-        spec = %{
-          id: GSS.Spreadsheet,
-          start: {GSS.Spreadsheet, :start_link, [spreadsheet_id, opts]},
-          shutdown: 5_000,
-          restart: :transient,
-          type: :worker
-        }
+    key = GSS.Registry.key(spreadsheet_id, opts)
 
-        {:ok, pid} = DynamicSupervisor.start_child(__MODULE__, spec)
-        :ok = GSS.Registry.new_spreadsheet(spreadsheet_id, pid, opts)
+    case Registry.lookup(GSS.Registry, key) do
+      [{pid, _value}] ->
         {:ok, pid}
+
+      [] ->
+        opts = Keyword.put(opts, :name, {:via, Registry, {GSS.Registry, key}})
+
+        case DynamicSupervisor.start_child(__MODULE__, {GSS.Spreadsheet, {spreadsheet_id, opts}}) do
+          {:ok, pid} -> {:ok, pid}
+          {:error, {:already_started, pid}} -> {:ok, pid}
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 end

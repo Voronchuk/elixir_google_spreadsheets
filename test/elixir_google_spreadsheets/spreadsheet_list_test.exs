@@ -9,10 +9,7 @@ defmodule GSS.SpreadsheetListTest do
 
   setup context do
     {:ok, pid} =
-      GSS.Spreadsheet.Supervisor.spreadsheet(@test_spreadsheet_id,
-        name: context.test,
-        list_name: @test_list
-      )
+      GSS.Spreadsheet.Supervisor.spreadsheet(@test_spreadsheet_id, list_name: @test_list)
 
     unless context[:skip_cleanup] do
       on_exit(fn ->
@@ -103,10 +100,7 @@ defmodule GSS.SpreadsheetListTest do
   @tag :skip_cleanup
   test "unexisting lists should gracefully fail" do
     {:ok, pid} =
-      GSS.Spreadsheet.Supervisor.spreadsheet(@test_spreadsheet_id,
-        name: :unknown_list,
-        list_name: "unknown"
-      )
+      GSS.Spreadsheet.Supervisor.spreadsheet(@test_spreadsheet_id, list_name: "unknown")
 
     # Wait for the process to exit, capturing the exit message.
     monitor_ref = Process.monitor(pid)
