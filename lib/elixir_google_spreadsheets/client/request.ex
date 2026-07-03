@@ -45,6 +45,17 @@ defmodule GSS.Client.Request do
     {:automatic, state}
   end
 
+  # HTTP statuses that are safe to retry regardless of method: the request was
+  # rejected by rate limiting, not executed server-side.
+  @retryable_any_status [429]
+
+  # HTTP statuses retried for idempotent (:get) requests only. A 5xx on a write
+  # may have been applied server-side, so retrying it risks a duplicate mutation.
+  @retryable_get_status [429, 500, 502, 503, 504]
+
+  # Default number of retries when the `:client` config key is absent.
+  @default_max_retries 3
+
   @impl true
   @spec handle_events([Client.event()], GenStage.from(), state()) :: {:noreply, [], state()}
   def handle_events([{:request, from, request}], _from, state) do
@@ -52,7 +63,10 @@ defmodule GSS.Client.Request do
 
     response = send_request(request)
     Logger.debug("Response #{inspect(response)}")
-    GenStage.reply(from, response)
+
+    unless maybe_schedule_retry(request, response, from) do
+      GenStage.reply(from, response)
+    end
 
     {:noreply, [], state}
   end
@@ -88,4 +102,75 @@ defmodule GSS.Client.Request do
         {:error, error}
     end
   end
+
+  # Classify the response and, when it is retryable and retries remain, schedule
+  # the request to re-enter the pipeline (via `GSS.Client`). Returns `true` when
+  # a retry was scheduled (caller must NOT reply yet), `false` otherwise.
+  @spec maybe_schedule_retry(RequestParams.t(), Client.response(), GenStage.from()) :: boolean()
+  defp maybe_schedule_retry(
+         %RequestParams{method: method, attempt: attempt} = request,
+         response,
+         from
+       ) do
+    outcome = classify_response(response)
+    max_retries = Client.config(:max_retries, @default_max_retries)
+
+    if retryable?(method, outcome) and attempt < max_retries do
+      delay = retry_delay(attempt, retry_after_ms(response))
+
+      Logger.warning(
+        "Retrying #{method} request (outcome=#{inspect(outcome)}, attempt=#{attempt + 1}/#{max_retries}, delay=#{delay}ms): #{request.url}"
+      )
+
+      retried = %{request | attempt: attempt + 1}
+      Process.send_after(Client, {:retry, {:request, from, retried}}, delay)
+      true
+    else
+      false
+    end
+  end
+
+  # Reduce a Finch result to the value used for retry classification: the HTTP
+  # status integer on a completed response, or `:error` on a transport error.
+  @spec classify_response(Client.response()) :: non_neg_integer() | :error
+  defp classify_response({:ok, %Finch.Response{status: status}}), do: status
+  defp classify_response({:error, _reason}), do: :error
+
+  @doc false
+  # Whether an outcome (HTTP status or `:error` transport failure) is retryable
+  # for the given method. 429 retries for every method; 5xx and transport errors
+  # retry for idempotent `:get` requests only (writes are not idempotent).
+  @spec retryable?(atom(), non_neg_integer() | :error) :: boolean()
+  def retryable?(:get, outcome) when outcome in @retryable_get_status, do: true
+  def retryable?(:get, :error), do: true
+  def retryable?(_method, outcome) when outcome in @retryable_any_status, do: true
+  def retryable?(_method, _outcome), do: false
+
+  @doc false
+  # Exponential backoff with full jitter, capped at 32s:
+  # `min(2^attempt s, 32s) + rand(1..1000) ms`. A `retry-after` value (in ms)
+  # acts as a floor when it is larger than the computed delay.
+  @spec retry_delay(non_neg_integer(), non_neg_integer() | nil) :: pos_integer()
+  def retry_delay(attempt, retry_after_ms \\ nil) do
+    delay = min(:timer.seconds(2 ** attempt), 32_000) + :rand.uniform(1_000)
+
+    case retry_after_ms do
+      ms when is_integer(ms) -> max(ms, delay)
+      nil -> delay
+    end
+  end
+
+  # Extract the `retry-after` header (integer seconds only) as milliseconds.
+  # HTTP-date form or a missing header yields `nil`.
+  @spec retry_after_ms(Client.response()) :: non_neg_integer() | nil
+  defp retry_after_ms({:ok, %Finch.Response{headers: headers}}) do
+    with {_key, value} <- List.keyfind(headers, "retry-after", 0),
+         {seconds, ""} <- Integer.parse(value) do
+      :timer.seconds(seconds)
+    else
+      _ -> nil
+    end
+  end
+
+  defp retry_after_ms(_response), do: nil
 end

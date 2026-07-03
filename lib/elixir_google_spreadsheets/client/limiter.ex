@@ -54,8 +54,8 @@ defmodule GSS.Client.Limiter do
     Logger.debug("init: #{inspect(args)}")
 
     state = %__MODULE__{
-      max_demand: args[:max_demand] || 100,
-      max_interval: args[:max_interval] || 1_000,
+      max_demand: args[:max_demand] || 60,
+      max_interval: args[:max_interval] || 60_000,
       interval: args[:interval] || 100,
       taken_events: 0,
       scheduled_at: nil

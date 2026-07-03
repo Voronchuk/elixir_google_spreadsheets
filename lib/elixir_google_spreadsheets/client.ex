@@ -13,13 +13,15 @@ defmodule GSS.Client do
             url: binary(),
             body: binary() | iodata(),
             headers: [{binary(), binary()}],
-            options: Keyword.t()
+            options: Keyword.t(),
+            attempt: non_neg_integer()
           }
-    defstruct method: nil, url: nil, body: "", headers: [], options: []
+    defstruct method: nil, url: nil, body: "", headers: [], options: [], attempt: 0
   end
 
   @type event :: {:request, GenStage.from(), RequestParams.t()}
   @type partition :: :write | :read
+  @type response :: {:ok, Finch.Response.t()} | {:error, Exception.t()}
 
   @spec start_link(any()) :: GenServer.on_start()
   def start_link(_args \\ []) do
@@ -112,6 +114,14 @@ defmodule GSS.Client do
   def handle_demand(demand, queue) when demand > 0 do
     {events, updated_queue} = take_from_queue(queue, demand, [])
     {:noreply, Enum.reverse(events), updated_queue}
+  end
+
+  @impl true
+  # Re-enqueue an event scheduled for retry by a Request worker. The event
+  # re-enters the same demand/limiter flow; the partition (:read/:write) is
+  # re-derived from its method on emission, so retries respect the same quota.
+  def handle_info({:retry, event}, queue) do
+    {:noreply, [], :queue.in(event, queue)}
   end
 
   @doc """

@@ -51,17 +51,37 @@ If none of these is configured, the library still boots (logging a warning) and 
 The [following Google Spreadsheet](https://docs.google.com/spreadsheets/d/1h85keViqbRzgTN245gEw5s9roxpaUtT7i-mNXQtT8qQ/edit?usp=sharing) is used to run tests locally, it can be copied to run local tests.
 
 ## API limits
-All Google API limits, suggested params are the following:
+Google's Sheets API quotas are 60 read + 60 write requests/min/user (two separate
+buckets), and Google has announced billing for quota overages later in 2026, so
+staying under these limits matters. The suggested quota-aligned params are:
 
 ```elixir
 config :elixir_google_spreadsheets, :client,
   request_workers: 50,
-  max_demand: 100,
+  max_demand: 60,
   max_interval: :timer.minutes(1),
   interval: 100,
   result_timeout: :timer.minutes(10),
+  max_retries: 3,
   request_opts: [] # See Finch request options
 ```
+
+`max_demand` is applied per partition, so read and write each get their own 60/min
+budget, matching Google's two buckets.
+
+### Retries
+Requests that fail transiently are retried automatically and re-enter the same
+rate-limited pipeline:
+
+* HTTP `429` (rate limited) is retried for **all** methods — the request was
+  rejected, not executed.
+* HTTP `500/502/503/504` and transport errors are retried for **`:get` only**,
+  because writes are not idempotent and a 5xx write may already have been applied
+  server-side.
+
+Backoff is exponential with jitter: `min(2^attempt seconds, 32s) + rand(1..1000ms)`.
+A `Retry-After` response header (integer seconds) is honoured as a floor. The number
+of retries is controlled by `max_retries` (default `3`; set to `0` to disable).
 
 # Usage
 Initialise spreadsheet thread with it's id which you can fetch from URL:

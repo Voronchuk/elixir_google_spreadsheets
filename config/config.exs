@@ -34,9 +34,10 @@ config :elixir_google_spreadsheets,
 
 config :elixir_google_spreadsheets, :client,
   request_workers: 50,
-  max_demand: 100,
+  max_demand: 60,
   max_interval: :timer.minutes(1),
   interval: 100,
-  result_timeout: :timer.minutes(10)
+  result_timeout: :timer.minutes(10),
+  max_retries: 3
 
 import_config "#{Mix.env()}.exs"
