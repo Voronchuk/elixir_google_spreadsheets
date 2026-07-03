@@ -185,24 +185,34 @@ defmodule GSS.SpreadsheetHttpTest do
 
   describe "missing auth config" do
     test "returns {:error, %GSS.MissingAuthConfig{}} without crashing the process", %{pid: pid} do
-      previous_token_generator =
-        Application.get_env(:elixir_google_spreadsheets, :token_generator)
+      # Snapshot all auth config keys (precedence: token_generator → goth → source → json)
+      auth_keys = [:token_generator, :goth, :source, :json]
 
-      Application.delete_env(:elixir_google_spreadsheets, :token_generator)
+      previous_auth =
+        Enum.map(auth_keys, fn key ->
+          {key, Application.fetch_env(:elixir_google_spreadsheets, key)}
+        end)
 
-      on_exit(fn ->
-        if previous_token_generator do
-          Application.put_env(
-            :elixir_google_spreadsheets,
-            :token_generator,
-            previous_token_generator
-          )
-        end
+      # Delete all auth config keys to force MissingAuthConfig
+      Enum.each(auth_keys, fn key ->
+        Application.delete_env(:elixir_google_spreadsheets, key)
       end)
 
-      # No token_generator (and no goth/source/json in test config) means
-      # GSS.Auth.token!/0 raises GSS.MissingAuthConfig; the query helper must turn
-      # that into an ordinary error tuple rather than crash the GenServer.
+      on_exit(fn ->
+        # Restore exactly as it was: put_env if it was present, delete_env if it was absent
+        Enum.each(previous_auth, fn {key, result} ->
+          case result do
+            {:ok, value} ->
+              Application.put_env(:elixir_google_spreadsheets, key, value)
+
+            :error ->
+              Application.delete_env(:elixir_google_spreadsheets, key)
+          end
+        end)
+      end)
+
+      # Ensure all auth sources are cleared so GSS.Auth.token!/0 raises GSS.MissingAuthConfig;
+      # the query helper must turn that into an ordinary error tuple rather than crash the GenServer.
       assert {:error, %GSS.MissingAuthConfig{}} =
                Spreadsheet.read_row(pid, 1, column_from: 1, column_to: 5)
 
