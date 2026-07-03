@@ -1,6 +1,9 @@
 defmodule GSS.Client.Request do
   @moduledoc """
   Worker of Request subscribed to Limiter, call request to API and send an answer to Client.
+
+  Only `:pool_timeout`, `:receive_timeout` and `:request_timeout` from `RequestParams.options`
+  are forwarded to `Finch.request/3`; any other keys (library-level or stale) are dropped.
   """
 
   use GenStage
@@ -20,9 +23,7 @@ defmodule GSS.Client.Request do
   Takes events from Limiter and send requests through Finch
 
   ## Options
-  * `:name` - used for name registration as described in the "Name registration" section of the module documentation. Default is `#{
-    __MODULE__
-  }`
+  * `:name` - used for name registration as described in the "Name registration" section of the module documentation. Default is `#{__MODULE__}`
   * `:limiters` - list of limiters with max_demand options. For example `[{#{Client.Limiter}, max_demand: 1}]`.
   """
   @spec start_link(options()) :: GenServer.on_start()
@@ -55,6 +56,13 @@ defmodule GSS.Client.Request do
     {:noreply, [], state}
   end
 
+  # Only these keys are valid `Finch.request/3` options as of finch 0.23 (which
+  # raises on unknown keys via `Keyword.validate!`). `options` also carries
+  # library-level keys (e.g. `:result_timeout`, `:range`, `:wrap_data`) used
+  # elsewhere in the pipeline, and may carry stale HTTPoison-era keys from user
+  # config, so we whitelist here rather than upstream.
+  @finch_request_options [:pool_timeout, :receive_timeout, :request_timeout]
+
   @spec send_request(RequestParams.t()) :: {:ok, Finch.Response.t()} | {:error, Exception.t()}
   defp send_request(request) do
     %RequestParams{
@@ -68,7 +76,9 @@ defmodule GSS.Client.Request do
     Logger.debug("send_request #{url}")
 
     finch_request = Finch.build(method, url, headers, body)
-    case Finch.request(finch_request, GSS.Finch, options || []) do
+    finch_options = Keyword.take(options || [], @finch_request_options)
+
+    case Finch.request(finch_request, GSS.Finch, finch_options) do
       {:ok, response} ->
         {:ok, response}
 
