@@ -143,7 +143,7 @@ defmodule GSS.Spreadsheet do
   @doc """
   Override row in a spreadsheet by index.
   """
-  @spec write_row(pid, integer(), spreadsheet_data, Keyword.t()) :: :ok
+  @spec write_row(pid, integer(), spreadsheet_data, Keyword.t()) :: :ok | {:error, Exception.t()}
   def write_row(pid, row_index, column_list, options \\ []) when is_list(column_list) do
     gen_server_call(pid, {:write_row, row_index, column_list, options}, options)
   end
@@ -151,7 +151,8 @@ defmodule GSS.Spreadsheet do
   @doc """
   Append row in a spreadsheet after an index.
   """
-  @spec append_row(pid, integer(), spreadsheet_data, Keyword.t()) :: :ok
+  @spec append_row(pid, integer(), spreadsheet_data, Keyword.t()) ::
+          :ok | {:error, Exception.t()}
   def append_row(pid, row_index, [cell | _] = column_list, options \\ [])
       when is_binary(cell) or is_nil(cell) do
     gen_server_call(pid, {:append_rows, row_index, [column_list], options}, options)
@@ -160,7 +161,7 @@ defmodule GSS.Spreadsheet do
   @doc """
   Clear row in a spreadsheet by index.
   """
-  @spec clear_row(pid, integer(), Keyword.t()) :: :ok
+  @spec clear_row(pid, integer(), Keyword.t()) :: :ok | {:error, Exception.t()}
   def clear_row(pid, row_index, options \\ []) do
     gen_server_call(pid, {:clear_row, row_index, options}, options)
   end
