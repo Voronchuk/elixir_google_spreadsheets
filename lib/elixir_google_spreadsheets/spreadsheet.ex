@@ -972,7 +972,7 @@ defmodule GSS.Spreadsheet do
   defp spreadsheet_query_post_batch(url_suffix, request, _options) do
     headers = %{"Authorization" => "Bearer #{GSS.Registry.token()}"}
     params = get_request_params()
-    body = Jason.encode!(request)
+    body = JSON.encode_to_iodata!(request)
     response = Client.request(:post, @api_url_spreadsheet <> url_suffix, body, headers, params)
     spreadsheet_query_response(response)
   end
@@ -980,7 +980,7 @@ defmodule GSS.Spreadsheet do
   @spec spreadsheet_query_response({:ok, Finch.Response.t()} | {:error, Exception.t()}) :: spreadsheet_response
   defp spreadsheet_query_response(response) do
     with {:ok, %{status: 200, body: body}} <- response,
-         {:ok, json} <- Jason.decode(body) do
+         {:ok, json} <- JSON.decode(body) do
       {:json, json}
     else
       {:ok, %{status: status, body: body}} when status != 200 ->
@@ -999,7 +999,7 @@ defmodule GSS.Spreadsheet do
     major_dimension = Keyword.get(options, :major_dimension, "ROWS")
     wrap_data = Keyword.get(options, :wrap_data, true)
 
-    Jason.encode!(%{
+    JSON.encode_to_iodata!(%{
       range: range,
       majorDimension: major_dimension,
       values: if(wrap_data, do: [data], else: data)

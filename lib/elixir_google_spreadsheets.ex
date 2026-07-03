@@ -9,7 +9,7 @@ defmodule GSS do
     # TODO Accept also from System.fetch_env.
     # https://github.com/peburrows/goth#installation
     credentials = Application.fetch_env!(:elixir_google_spreadsheets, :json)
-    |> Jason.decode!()
+    |> JSON.decode!()
     scopes = ["https://www.googleapis.com/auth/spreadsheets"]
     source = {:service_account, credentials, scopes: scopes}
 
