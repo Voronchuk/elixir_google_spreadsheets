@@ -66,6 +66,26 @@ defmodule GSS.SpreadsheetHttpTest do
       pid: pid,
       id: id
     } do
+      # Pin stub token_generator for this test: snapshot current env, force stub, restore on exit.
+      # Without this, config/test.local.exs (if present) would set real credentials that break the assertion.
+      previous_token_gen = Application.fetch_env(:elixir_google_spreadsheets, :token_generator)
+
+      Application.put_env(
+        :elixir_google_spreadsheets,
+        :token_generator,
+        {GSS.TestToken, :fetch, []}
+      )
+
+      on_exit(fn ->
+        case previous_token_gen do
+          {:ok, value} ->
+            Application.put_env(:elixir_google_spreadsheets, :token_generator, value)
+
+          :error ->
+            Application.delete_env(:elixir_google_spreadsheets, :token_generator)
+        end
+      end)
+
       test_pid = self()
 
       stub(dispatcher, fn conn ->
