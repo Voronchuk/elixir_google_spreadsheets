@@ -25,3 +25,25 @@ defmodule GSS.InvalidInput do
   """
   defexception [:message]
 end
+
+defmodule GSS.MissingAuthConfig do
+  @moduledoc """
+  Raised on the first API request when no authentication is configured for
+  `:elixir_google_spreadsheets`.
+  """
+  defexception message: """
+               no authentication configured for :elixir_google_spreadsheets. Set one of (first configured wins):
+
+                   # reuse a Goth instance already running in your app
+                   config :elixir_google_spreadsheets, goth: MyApp.Goth
+
+                   # any Goth source; GSS starts its own Goth
+                   config :elixir_google_spreadsheets, source: {:metadata, []}
+
+                   # legacy: raw service-account JSON; GSS starts its own Goth
+                   config :elixir_google_spreadsheets, json: File.read!("service_account.json")
+
+                   # escape hatch / tests: an MFA returning {:ok, token}
+                   config :elixir_google_spreadsheets, token_generator: {MyApp, :fetch_token, []}
+               """
+end

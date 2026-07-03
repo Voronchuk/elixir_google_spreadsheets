@@ -948,7 +948,7 @@ defmodule GSS.Spreadsheet do
 
   @spec spreadsheet_query(:get | :post, String.t()) :: spreadsheet_response
   defp spreadsheet_query(type, url_suffix) when is_atom(type) do
-    headers = %{"Authorization" => "Bearer #{GSS.Registry.token()}"}
+    headers = %{"Authorization" => "Bearer #{GSS.Auth.token!()}"}
     params = get_request_params()
     response = Client.request(type, @api_url_spreadsheet <> url_suffix, "", headers, params)
     spreadsheet_query_response(response)
@@ -957,7 +957,7 @@ defmodule GSS.Spreadsheet do
   @spec spreadsheet_query(:post | :put, String.t(), spreadsheet_data, Keyword.t()) ::
           spreadsheet_response
   defp spreadsheet_query(type, url_suffix, data, options) when is_atom(type) do
-    headers = %{"Authorization" => "Bearer #{GSS.Registry.token()}"}
+    headers = %{"Authorization" => "Bearer #{GSS.Auth.token!()}"}
     params = get_request_params()
 
     response =
@@ -976,7 +976,7 @@ defmodule GSS.Spreadsheet do
 
   @spec spreadsheet_query_post_batch(String.t(), map(), Keyword.t()) :: spreadsheet_response
   defp spreadsheet_query_post_batch(url_suffix, request, _options) do
-    headers = %{"Authorization" => "Bearer #{GSS.Registry.token()}"}
+    headers = %{"Authorization" => "Bearer #{GSS.Auth.token!()}"}
     params = get_request_params()
     body = JSON.encode_to_iodata!(request)
     response = Client.request(:post, @api_url_spreadsheet <> url_suffix, body, headers, params)

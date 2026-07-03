@@ -5,23 +5,28 @@ defmodule GSS do
 
   use Application
 
+  require Logger
+
+  alias GSS.Auth
+
   def start(_type, _args) do
-    # TODO Accept also from System.fetch_env.
-    # https://github.com/peburrows/goth#installation
-    credentials = Application.fetch_env!(:elixir_google_spreadsheets, :json)
-    |> JSON.decode!()
-    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-    source = {:service_account, credentials, scopes: scopes}
+    children =
+      [
+        {GSS.Registry, []},
+        {Finch, name: GSS.Finch},
+        {GSS.Spreadsheet.Supervisor, []},
+        {GSS.Client.Supervisor, []}
+      ] ++ List.wrap(Auth.goth_child_spec())
 
-    children = [
-      {Goth, name: GSS.Goth, source: source},
-      {Finch, name: GSS.Finch},
-      {GSS.Registry, []},
-      {GSS.Spreadsheet.Supervisor, []},
-      {GSS.Client.Supervisor, []}
-    ]
+    unless Auth.configured?() do
+      Logger.warning(
+        "GSS: no authentication configured — booted without a Goth child and will raise " <>
+          "GSS.MissingAuthConfig on the first API request. Configure one of :token_generator, " <>
+          ":goth, :source or :json for :elixir_google_spreadsheets."
+      )
+    end
 
-    Supervisor.start_link(children, strategy: :one_for_all)
+    Supervisor.start_link(children, strategy: :one_for_all, name: GSS.Supervisor)
   end
 
   @doc """

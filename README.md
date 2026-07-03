@@ -13,10 +13,39 @@ Check [ecto_gss](https://github.com/Voronchuk/ecto_gss) if you need to integrate
 4. Press __Manage service accounts__ on a credential page, copy your __Service Account Identifier__: _[projectname]@[domain].iam.gserviceaccount.com_
 5. Create or open existing __Google Spreadsheet document__ on your __Google Drive__ and add __Service Account Identifier__ as user invited in spreadsheet's __Collaboration Settings__.
 6. Add `{:elixir_google_spreadsheets, "~> 0.4"}` to __mix.exs__ under `deps` function, add `:elixir_google_spreadsheets` in your application list.
-7. Add __service_account.json__ in your `config.exs` or other config file, like `dev.exs` or `prod.secret.exs`.
+7. Point the library at __service_account.json__. Load the key at runtime in `config/runtime.exs` so the private key is not baked into your compiled release:
+
+    ```elixir
+    # config/runtime.exs
     config :elixir_google_spreadsheets,
-        json: "./config/service_account.json" |> File.read!
+      json: File.read!("./config/service_account.json")
+    ```
+
+    See [Authentication options](#authentication-options) below for alternatives.
 8. Run `mix deps.get && mix deps.compile`.
+
+## Authentication options
+A bearer token is resolved at request time from the first configured source, in this order of precedence (first configured wins):
+
+```elixir
+config :elixir_google_spreadsheets,
+  # 1. Reuse a Goth instance already running in your app (GSS starts no Goth child)
+  goth: MyApp.Goth,
+
+  # 2. Any Goth source; GSS starts its own Goth child
+  source: {:metadata, []}, # or :default, {:service_account, credentials, opts}, ...
+
+  # 3. Legacy: raw service-account JSON string; GSS starts its own Goth child
+  json: File.read!("./config/service_account.json"),
+
+  # 4. Escape hatch / tests: an MFA returning {:ok, token}
+  token_generator: {MyApp, :fetch_token, []},
+
+  # Scopes for the :json path (default below)
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"]
+```
+
+If none of these is configured, the library still boots (logging a warning) and raises `GSS.MissingAuthConfig` on the first API request.
 
 ## Testing
 The [following Google Spreadsheet](https://docs.google.com/spreadsheets/d/1h85keViqbRzgTN245gEw5s9roxpaUtT7i-mNXQtT8qQ/edit?usp=sharing) is used to run tests locally, it can be copied to run local tests.

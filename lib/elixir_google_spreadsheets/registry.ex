@@ -1,21 +1,14 @@
 defmodule GSS.Registry do
   @moduledoc """
-  Google spreadsheets core authorization.
-  Automatically updates access token after expiration.
+  In-memory registry of running spreadsheet processes.
+
+  Maps a spreadsheet id (optionally scoped by `:list_name`) to the pid of the
+  GenServer serving that sheet, so callers can look up or reuse an existing
+  process. Authentication lives in `GSS.Auth`.
   """
 
   use GenServer
 
-  @typedoc """
-  State of Google Cloud API :
-      %{
-          auth: %Goth.Token{
-              expires: 1453356568,
-              token: "ya29.cALlJ4HHWRvMkYB-WsAR-CZnexE459yA7QPqKg3nei1y2T7-iqmbcgxb8XrTATNn_Blim",
-              type: "Bearer"
-          }
-      }
-  """
   @type state :: map()
 
   @spec start_link(any()) :: {:ok, pid}
@@ -32,13 +25,8 @@ defmodule GSS.Registry do
     {:ok, state}
   end
 
-  @doc """
-  Get account authorization token.
-  """
-  @spec token() :: String.t()
-  def token do
-    GenServer.call(__MODULE__, :token)
-  end
+  @deprecated "Use GSS.Auth.token!/0 instead"
+  defdelegate token, to: GSS.Auth, as: :token!
 
   @doc """
   Add or replace Google Spreadsheet in a registry.
@@ -54,30 +42,6 @@ defmodule GSS.Registry do
   @spec spreadsheet_pid(String.t(), Keyword.t()) :: pid | nil
   def spreadsheet_pid(spreadsheet_id, opts \\ []) do
     GenServer.call(__MODULE__, {:spreadsheet_pid, spreadsheet_id, opts})
-  end
-
-  # Get account authorization token, issue new token in case old has expired.
-  def handle_call(
-        :token,
-        _from,
-        %{
-          auth: %{
-            token: token,
-            expires: expires
-          }
-        } = state
-      ) do
-    if expires < :os.system_time(:seconds) do
-      new_state = Map.put(state, :auth, refresh_token())
-      {:reply, new_state.auth.token, new_state}
-    else
-      {:reply, token, state}
-    end
-  end
-
-  def handle_call(:token, _from, state) do
-    new_state = Map.put(state, :auth, refresh_token())
-    {:reply, new_state.auth.token, new_state}
   end
 
   # Update :active_sheets registry record.
@@ -102,12 +66,6 @@ defmodule GSS.Registry do
       when is_bitstring(spreadsheet_id) do
     registry_id = id(spreadsheet_id, opts)
     {:reply, Map.get(active_sheets, registry_id, nil), state}
-  end
-
-  @spec refresh_token() :: map()
-  defp refresh_token do
-    {:ok, token} = Goth.fetch(GSS.Goth)
-    token
   end
 
   @spec id(String.t(), Keyword.t()) :: String.t()

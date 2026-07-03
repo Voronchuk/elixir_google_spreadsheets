@@ -28,9 +28,6 @@ import Config
 # here (which is why it is important to import them last).
 #
 config :elixir_google_spreadsheets,
-  json: "./config/service_account.json" |> File.read!()
-
-config :elixir_google_spreadsheets,
   max_rows_per_request: 301,
   default_column_from: 1,
   default_column_to: 26
