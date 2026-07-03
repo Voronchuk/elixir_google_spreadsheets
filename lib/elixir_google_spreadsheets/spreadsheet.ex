@@ -63,12 +63,12 @@ defmodule GSS.Spreadsheet do
             {:noreply, Map.put(state, :sheet_id, sheet_id)}
 
           _ ->
-            {:stop, "sheet list not found #{list_name}", state}
+            {:stop, {:shutdown, "sheet list not found #{list_name}"}, state}
         end
 
       {:error, exception} ->
         Logger.error("[#{__MODULE__}] failed to load sheet id: #{inspect(exception)}")
-        {:stop, "failed to load sheet id", state}
+        {:stop, {:shutdown, "failed to load sheet id"}, state}
     end
   end
 

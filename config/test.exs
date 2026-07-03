@@ -11,6 +11,8 @@ config :elixir_google_spreadsheets,
 
 config :elixir_google_spreadsheets, :client, request_workers: 30
 
+config :logger, level: :info
+
 if File.exists?("config/test.local.exs") do
   import_config "test.local.exs"
 end

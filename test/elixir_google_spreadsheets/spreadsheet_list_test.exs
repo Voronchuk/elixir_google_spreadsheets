@@ -107,6 +107,9 @@ defmodule GSS.SpreadsheetListTest do
 
     # Wait for the process to exit, capturing the exit message.
     monitor_ref = Process.monitor(pid)
-    assert_receive {:DOWN, ^monitor_ref, :process, ^pid, "sheet list not found unknown"}, 5_000
+
+    assert_receive {:DOWN, ^monitor_ref, :process, ^pid,
+                    {:shutdown, "sheet list not found unknown"}},
+                   5_000
   end
 end

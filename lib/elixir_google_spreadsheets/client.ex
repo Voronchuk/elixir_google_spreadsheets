@@ -8,8 +8,9 @@ defmodule GSS.Client do
   require Logger
 
   defmodule RequestParams do
-    @moduledoc false
+    @moduledoc "Request parameters flowing through the client GenStage pipeline."
 
+    @derive {Inspect, except: [:headers, :body]}
     @type t :: %__MODULE__{
             method: atom(),
             url: binary(),
