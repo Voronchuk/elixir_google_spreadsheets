@@ -23,11 +23,11 @@ defmodule GSS.SpreadsheetTest do
 
   @spec cleanup_table(pid) :: :ok
   defp cleanup_table(pid) do
-    GSS.Spreadsheet.clear_row(pid, 1)
-    GSS.Spreadsheet.clear_row(pid, 2)
-    GSS.Spreadsheet.clear_row(pid, 3)
-    GSS.Spreadsheet.clear_row(pid, 4)
-    GSS.Spreadsheet.clear_row(pid, 5)
+    GSS.Spreadsheet.clear_row(pid, 1, timeout: 30_000)
+    GSS.Spreadsheet.clear_row(pid, 2, timeout: 30_000)
+    GSS.Spreadsheet.clear_row(pid, 3, timeout: 30_000)
+    GSS.Spreadsheet.clear_row(pid, 4, timeout: 30_000)
+    GSS.Spreadsheet.clear_row(pid, 5, timeout: 30_000)
   end
 
   test "initialize new spreadsheet process", %{spreadsheet: pid} do
@@ -110,9 +110,9 @@ defmodule GSS.SpreadsheetTest do
     :ok = GSS.Spreadsheet.write_row(pid, 1002, @test_row1)
     {:ok, result} = GSS.Spreadsheet.read_rows(pid, 1000, 1002, column_to: 5, pad_empty: true)
     assert result == [@test_row1, @test_row1, @test_row1]
-    GSS.Spreadsheet.clear_row(pid, 1000)
-    GSS.Spreadsheet.clear_row(pid, 1001)
-    GSS.Spreadsheet.clear_row(pid, 1002)
+    GSS.Spreadsheet.clear_row(pid, 1000, timeout: 30_000)
+    GSS.Spreadsheet.clear_row(pid, 1001, timeout: 30_000)
+    GSS.Spreadsheet.clear_row(pid, 1002, timeout: 30_000)
   end
 
   test "read batched for 250 rows", %{spreadsheet: pid} do

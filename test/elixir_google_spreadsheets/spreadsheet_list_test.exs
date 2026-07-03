@@ -26,10 +26,10 @@ defmodule GSS.SpreadsheetListTest do
 
   @spec cleanup_table(pid) :: :ok
   defp cleanup_table(pid) do
-    if Process.alive?(pid), do: GSS.Spreadsheet.clear_row(pid, 1)
-    if Process.alive?(pid), do: GSS.Spreadsheet.clear_row(pid, 2)
-    if Process.alive?(pid), do: GSS.Spreadsheet.clear_row(pid, 3)
-    if Process.alive?(pid), do: GSS.Spreadsheet.clear_row(pid, 4)
+    if Process.alive?(pid), do: GSS.Spreadsheet.clear_row(pid, 1, timeout: 30_000)
+    if Process.alive?(pid), do: GSS.Spreadsheet.clear_row(pid, 2, timeout: 30_000)
+    if Process.alive?(pid), do: GSS.Spreadsheet.clear_row(pid, 3, timeout: 30_000)
+    if Process.alive?(pid), do: GSS.Spreadsheet.clear_row(pid, 4, timeout: 30_000)
     :ok
   end
 
