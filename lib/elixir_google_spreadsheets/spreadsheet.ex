@@ -993,7 +993,7 @@ defmodule GSS.Spreadsheet do
     end
   end
 
-  @spec spreadsheet_query_body(spreadsheet_data, Keyword.t()) :: String.t() | no_return()
+  @spec spreadsheet_query_body(spreadsheet_data, Keyword.t()) :: iodata() | no_return()
   defp spreadsheet_query_body(data, options) do
     range = Keyword.fetch!(options, :range)
     major_dimension = Keyword.get(options, :major_dimension, "ROWS")
