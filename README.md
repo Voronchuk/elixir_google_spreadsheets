@@ -29,17 +29,17 @@ A bearer token is resolved at request time from the first configured source, in 
 
 ```elixir
 config :elixir_google_spreadsheets,
-  # 1. Reuse a Goth instance already running in your app (GSS starts no Goth child)
+  # 1. Escape hatch / tests: an MFA returning {:ok, token}
+  token_generator: {MyApp, :fetch_token, []},
+
+  # 2. Reuse a Goth instance already running in your app (GSS starts no Goth child)
   goth: MyApp.Goth,
 
-  # 2. Any Goth source; GSS starts its own Goth child
+  # 3. Any Goth source; GSS starts its own Goth child
   source: {:metadata, []}, # or :default, {:service_account, credentials, opts}, ...
 
-  # 3. Legacy: raw service-account JSON string; GSS starts its own Goth child
+  # 4. Legacy: raw service-account JSON string; GSS starts its own Goth child
   json: File.read!("./config/service_account.json"),
-
-  # 4. Escape hatch / tests: an MFA returning {:ok, token}
-  token_generator: {MyApp, :fetch_token, []},
 
   # Scopes for the :json path (default below)
   scopes: ["https://www.googleapis.com/auth/spreadsheets"]
