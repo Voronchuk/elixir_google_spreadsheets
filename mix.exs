@@ -4,15 +4,15 @@ defmodule GSS.Mixfile do
   def project do
     [
       app: :elixir_google_spreadsheets,
-      version: "0.4.0",
-      elixir: "~> 1.17",
+      version: "1.0.0",
+      elixir: "~> 1.18",
       description: "Elixir library to read and write data of Google Spreadsheets.",
       docs: [main: "GSS", extras: ["README.md"]],
-      build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       package: package(),
       elixirc_paths: elixirc_paths(Mix.env()),
-      deps: deps()
+      deps: deps(),
+      dialyzer: [plt_file: {:no_warn, "priv/plts/project.plt"}]
     ]
   end
 
@@ -28,11 +28,7 @@ defmodule GSS.Mixfile do
 
   def application do
     [
-      extra_applications: [
-        :logger,
-        :goth,
-        :gen_stage
-      ],
+      extra_applications: [:logger],
       mod: {GSS, []}
     ]
   end
@@ -40,13 +36,13 @@ defmodule GSS.Mixfile do
   defp deps do
     [
       {:goth, "~> 1.4"},
-      {:gen_stage, "~> 1.2"},
-      {:finch, "~> 0.19"},
+      {:gen_stage, "~> 1.3"},
+      {:finch, "~> 0.23"},
       {:jason, "~> 1.4"},
-      {:earmark, ">= 0.0.0", only: :dev},
-      {:ex_doc, "~> 0.37", only: :dev, runtime: false},
-      {:logger_file_backend, ">= 0.0.12", only: [:dev, :test]},
-      {:dialyxir, "~> 1.1", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.4", only: :dev, runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:bypass, "~> 2.1", only: :test}
     ]
   end
 

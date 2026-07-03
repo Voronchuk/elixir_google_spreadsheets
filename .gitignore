@@ -5,3 +5,5 @@ doc
 config/*.local.exs
 .editorconfig
 .elixir_ls
+.superpowers/
+/priv/plts/
