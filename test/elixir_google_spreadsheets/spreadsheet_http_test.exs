@@ -183,6 +183,33 @@ defmodule GSS.SpreadsheetHttpTest do
     end
   end
 
+  describe "missing auth config" do
+    test "returns {:error, %GSS.MissingAuthConfig{}} without crashing the process", %{pid: pid} do
+      previous_token_generator =
+        Application.get_env(:elixir_google_spreadsheets, :token_generator)
+
+      Application.delete_env(:elixir_google_spreadsheets, :token_generator)
+
+      on_exit(fn ->
+        if previous_token_generator do
+          Application.put_env(
+            :elixir_google_spreadsheets,
+            :token_generator,
+            previous_token_generator
+          )
+        end
+      end)
+
+      # No token_generator (and no goth/source/json in test config) means
+      # GSS.Auth.token!/0 raises GSS.MissingAuthConfig; the query helper must turn
+      # that into an ordinary error tuple rather than crash the GenServer.
+      assert {:error, %GSS.MissingAuthConfig{}} =
+               Spreadsheet.read_row(pid, 1, column_from: 1, column_to: 5)
+
+      assert Process.alive?(pid)
+    end
+  end
+
   # Install the handler the stub server dispatches the next request to.
   @spec stub(pid(), (Plug.Conn.t() -> Plug.Conn.t())) :: :ok
   defp stub(dispatcher, handler) when is_function(handler, 1) do

@@ -165,7 +165,7 @@ defmodule GSS.Client.Request do
   @spec retry_after_ms(Client.response()) :: non_neg_integer() | nil
   defp retry_after_ms({:ok, %Finch.Response{headers: headers}}) do
     with {_key, value} <- List.keyfind(headers, "retry-after", 0),
-         {seconds, ""} <- Integer.parse(value) do
+         {seconds, ""} <- Integer.parse(String.trim(value)) do
       :timer.seconds(seconds)
     else
       _ -> nil

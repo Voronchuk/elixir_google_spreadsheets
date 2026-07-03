@@ -949,39 +949,53 @@ defmodule GSS.Spreadsheet do
 
   @spec spreadsheet_query(:get | :post, String.t()) :: spreadsheet_response
   defp spreadsheet_query(type, url_suffix) when is_atom(type) do
-    headers = %{"Authorization" => "Bearer #{GSS.Auth.token!()}"}
-    params = get_request_params()
-    response = Client.request(type, api_url() <> url_suffix, "", headers, params)
-    spreadsheet_query_response(response)
+    with {:ok, headers} <- auth_headers() do
+      params = get_request_params()
+      response = Client.request(type, api_url() <> url_suffix, "", headers, params)
+      spreadsheet_query_response(response)
+    end
   end
 
   @spec spreadsheet_query(:post | :put, String.t(), spreadsheet_data, Keyword.t()) ::
           spreadsheet_response
   defp spreadsheet_query(type, url_suffix, data, options) when is_atom(type) do
-    headers = %{"Authorization" => "Bearer #{GSS.Auth.token!()}"}
-    params = get_request_params()
+    with {:ok, headers} <- auth_headers() do
+      params = get_request_params()
 
-    response =
-      case type do
-        :post ->
-          body = spreadsheet_query_body(data, options)
-          Client.request(:post, api_url() <> url_suffix, body, headers, params)
+      response =
+        case type do
+          :post ->
+            body = spreadsheet_query_body(data, options)
+            Client.request(:post, api_url() <> url_suffix, body, headers, params)
 
-        :put ->
-          body = spreadsheet_query_body(data, options)
-          Client.request(:put, api_url() <> url_suffix, body, headers, params)
-      end
+          :put ->
+            body = spreadsheet_query_body(data, options)
+            Client.request(:put, api_url() <> url_suffix, body, headers, params)
+        end
 
-    spreadsheet_query_response(response)
+      spreadsheet_query_response(response)
+    end
   end
 
   @spec spreadsheet_query_post_batch(String.t(), map(), Keyword.t()) :: spreadsheet_response
   defp spreadsheet_query_post_batch(url_suffix, request, _options) do
-    headers = %{"Authorization" => "Bearer #{GSS.Auth.token!()}"}
-    params = get_request_params()
-    body = JSON.encode_to_iodata!(request)
-    response = Client.request(:post, api_url() <> url_suffix, body, headers, params)
-    spreadsheet_query_response(response)
+    with {:ok, headers} <- auth_headers() do
+      params = get_request_params()
+      body = JSON.encode_to_iodata!(request)
+      response = Client.request(:post, api_url() <> url_suffix, body, headers, params)
+      spreadsheet_query_response(response)
+    end
+  end
+
+  # Build the Authorization header, converting a missing-auth-config situation
+  # into an ordinary `{:error, exception}` result instead of letting
+  # `GSS.Auth.token!/0` raise and crash the GenServer. Only `GSS.MissingAuthConfig`
+  # is rescued; every other exception propagates untouched.
+  @spec auth_headers() :: {:ok, %{binary() => binary()}} | {:error, Exception.t()}
+  defp auth_headers do
+    {:ok, %{"Authorization" => "Bearer #{GSS.Auth.token!()}"}}
+  rescue
+    exception in GSS.MissingAuthConfig -> {:error, exception}
   end
 
   @spec spreadsheet_query_response({:ok, Finch.Response.t()} | {:error, Exception.t()}) ::

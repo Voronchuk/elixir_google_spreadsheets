@@ -65,8 +65,11 @@ defmodule GSS.Auth do
   @spec goth_child_spec() :: {module(), keyword()} | nil
   def goth_child_spec do
     case resolve() do
-      {:own_goth, source} ->
-        {Goth, name: GSS.Goth, source: source, http_client: {&__MODULE__.finch_http_client/1, []}}
+      {:own_goth, marker} ->
+        {Goth,
+         name: GSS.Goth,
+         source: goth_source(marker),
+         http_client: {&__MODULE__.finch_http_client/1, []}}
 
       _ ->
         nil
@@ -91,21 +94,32 @@ defmodule GSS.Auth do
     |> Finch.request(GSS.Finch, options)
   end
 
-  # Resolve the active auth strategy following the documented precedence.
+  # Resolve the active auth strategy following the documented precedence. The
+  # `:own_goth` marker keeps the raw source lazy so nothing is decoded on the
+  # `token!/0` path; the actual source is materialised in `goth_source/1`, which
+  # only `goth_child_spec/0` calls.
   @spec resolve() ::
           {:token_generator, mfargs()}
           | {:goth, module()}
-          | {:own_goth, term()}
+          | {:own_goth, {:source, term()} | :json}
           | :none
   defp resolve do
     cond do
       mfa = GSS.config(:token_generator) -> {:token_generator, mfa}
       goth = GSS.config(:goth) -> {:goth, goth}
-      source = GSS.config(:source) -> {:own_goth, source}
-      json = GSS.config(:json) -> {:own_goth, json_source(json)}
+      source = GSS.config(:source) -> {:own_goth, {:source, source}}
+      GSS.config(:json) -> {:own_goth, :json}
       true -> :none
     end
   end
+
+  # Materialise the Goth source from a resolve/0 marker. Decoding the `:json`
+  # config here (rather than in resolve/0) preserves fail-fast at boot — a
+  # malformed JSON key still crashes when the json path is the configured one —
+  # while avoiding a decode on the token!/0 path or a double decode at boot.
+  @spec goth_source({:source, term()} | :json) :: term()
+  defp goth_source({:source, source}), do: source
+  defp goth_source(:json), do: json_source(GSS.config(:json))
 
   @spec json_source(String.t()) :: {:service_account, map(), keyword()}
   defp json_source(json) do

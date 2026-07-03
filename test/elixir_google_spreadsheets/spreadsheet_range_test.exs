@@ -50,5 +50,18 @@ defmodule GSS.SpreadsheetRangeTest do
         GSS.Spreadsheet.range(1, 400, 1, 5)
       end
     end
+
+    test "raises at the max_rows boundary (span == max_rows)" do
+      # guard is `row_to - row_from >= max_rows()` with default 301;
+      # 302 - 1 = 301 >= 301 -> raises
+      assert_raise GSS.InvalidRange, fn ->
+        GSS.Spreadsheet.range(1, 302, 1, 5)
+      end
+    end
+
+    test "succeeds just under the max_rows boundary (span == max_rows - 1)" do
+      # 301 - 1 = 300 < 301 -> allowed
+      assert GSS.Spreadsheet.range(1, 301, 1, 5) == "A1:E301"
+    end
   end
 end

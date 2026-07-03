@@ -34,7 +34,6 @@ defmodule GSS.Client.Supervisor do
           {Limiter, :start_link,
            [
              limiter_args
-             |> Keyword.put(:partition, :read)
              |> Keyword.put(:clients, [{Client, partition: :read}])
              |> Keyword.put(:name, Limiter.Reader)
            ]}

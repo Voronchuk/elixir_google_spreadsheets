@@ -127,6 +127,13 @@ defmodule GSS.Client do
     {:noreply, [], :queue.in(event, queue)}
   end
 
+  # A stray message must not crash the producer: crashing here would drop the
+  # whole pending queue and orphan every in-flight caller. Log and ignore.
+  def handle_info(msg, queue) do
+    Logger.debug("[#{__MODULE__}] ignoring unexpected message: #{inspect(msg)}")
+    {:noreply, [], queue}
+  end
+
   @doc """
   Read config settings scoped for GSS client.
   """

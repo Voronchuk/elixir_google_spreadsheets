@@ -34,6 +34,9 @@ defmodule GSS.MissingAuthConfig do
   defexception message: """
                no authentication configured for :elixir_google_spreadsheets. Set one of (first configured wins):
 
+                   # escape hatch / tests: an MFA returning {:ok, token}
+                   config :elixir_google_spreadsheets, token_generator: {MyApp, :fetch_token, []}
+
                    # reuse a Goth instance already running in your app
                    config :elixir_google_spreadsheets, goth: MyApp.Goth
 
@@ -42,8 +45,5 @@ defmodule GSS.MissingAuthConfig do
 
                    # legacy: raw service-account JSON; GSS starts its own Goth
                    config :elixir_google_spreadsheets, json: File.read!("service_account.json")
-
-                   # escape hatch / tests: an MFA returning {:ok, token}
-                   config :elixir_google_spreadsheets, token_generator: {MyApp, :fetch_token, []}
                """
 end
