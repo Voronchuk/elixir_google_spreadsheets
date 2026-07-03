@@ -12,7 +12,7 @@ Check [ecto_gss](https://github.com/Voronchuk/ecto_gss) if you need to integrate
 3. Select your project name as service account and __JSON__ as key format, download the created key and rename it to __service_account.json__.
 4. Press __Manage service accounts__ on a credential page, copy your __Service Account Identifier__: _[projectname]@[domain].iam.gserviceaccount.com_
 5. Create or open existing __Google Spreadsheet document__ on your __Google Drive__ and add __Service Account Identifier__ as user invited in spreadsheet's __Collaboration Settings__.
-6. Add `{:elixir_google_spreadsheets, "~> 0.4"}` to __mix.exs__ under `deps` function, add `:elixir_google_spreadsheets` in your application list.
+6. Add `{:elixir_google_spreadsheets, "~> 1.0"}` to __mix.exs__ under `deps` function.
 7. Point the library at __service_account.json__. Load the key at runtime in `config/runtime.exs` so the private key is not baked into your compiled release:
 
     ```elixir
@@ -48,7 +48,20 @@ config :elixir_google_spreadsheets,
 If none of these is configured, the library still boots (logging a warning) and raises `GSS.MissingAuthConfig` on the first API request.
 
 ## Testing
-The [following Google Spreadsheet](https://docs.google.com/spreadsheets/d/1h85keViqbRzgTN245gEw5s9roxpaUtT7i-mNXQtT8qQ/edit?usp=sharing) is used to run tests locally, it can be copied to run local tests.
+`mix test` runs the full suite offline against a local stub HTTP server — no credentials
+and no network access required. Tests that hit the real Google Sheets API are tagged
+`:integration` and excluded by default; run them with real credentials via:
+
+```sh
+mix test --include integration
+```
+
+This needs a `config/test.local.exs` with real authentication configured (set
+`token_generator: nil` and either `json:` or `source:`, see [Authentication
+options](#authentication-options) above). The [testing
+spreadsheet](https://docs.google.com/spreadsheets/d/1h85keViqbRzgTN245gEw5s9roxpaUtT7i-mNXQtT8qQ/edit?usp=sharing)
+is used by default and can be copied into your own Drive; point the suite at your copy
+with the `GSS_TEST_SPREADSHEET_ID` environment variable.
 
 ## API limits
 Google's Sheets API quotas are 60 read + 60 write requests/min/user (two separate
@@ -69,6 +82,10 @@ config :elixir_google_spreadsheets, :client,
 `max_demand` is applied per partition, so read and write each get their own 60/min
 budget, matching Google's two buckets.
 
+`request_opts` (and the per-call `options` argument accepted by `GSS.Client.request/5`)
+only forward `:pool_timeout`, `:receive_timeout` and `:request_timeout` on to
+`Finch.request/3`; any other keys are ignored.
+
 ### Retries
 Requests that fail transiently are retried automatically and re-enter the same
 rate-limited pipeline:
@@ -81,7 +98,16 @@ rate-limited pipeline:
 
 Backoff is exponential with jitter: `min(2^attempt seconds, 32s) + rand(1..1000ms)`.
 A `Retry-After` response header (integer seconds) is honoured as a floor. The number
-of retries is controlled by `max_retries` (default `3`; set to `0` to disable).
+of retries is controlled by `max_retries` (default `3`; set to `0` to disable). Note
+that a short custom `result_timeout` can make the caller's `GenStage.call/3` time out
+while a retry is still in flight; the default `result_timeout` of `:timer.minutes(10)`
+is sized to cover the worst case (`max_retries` exhausted with full backoff).
+
+### Observability
+Finch emits its own [`:telemetry`](https://hexdocs.pm/telemetry) events for every HTTP
+request (`[:finch, :request, :start | :stop | :exception]`, plus pool/connect/send/recv
+events) — attach a handler to these for latency and error instrumentation without
+modifying this library.
 
 # Usage
 Initialise spreadsheet thread with it's id which you can fetch from URL:
