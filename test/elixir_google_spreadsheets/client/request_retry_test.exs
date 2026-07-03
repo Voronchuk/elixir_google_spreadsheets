@@ -2,7 +2,7 @@ defmodule GSS.Client.RequestRetryTest do
   @moduledoc """
   Unit tests for the pure retry classification/backoff helpers in
   `GSS.Client.Request`. The full send -> retryable -> re-enqueue loop is covered
-  by the Bypass integration suite, not here.
+  by the offline HTTP suite (see spreadsheet_http_test.exs), not here.
   """
   use ExUnit.Case, async: true
 

@@ -41,7 +41,7 @@ defmodule GSS.Mixfile do
       {:ex_doc, "~> 0.40", only: :dev, runtime: false},
       {:dialyxir, "~> 1.4", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:bypass, "~> 2.1", only: :test}
+      {:plug_cowboy, "~> 2.7", only: :test}
     ]
   end
 
