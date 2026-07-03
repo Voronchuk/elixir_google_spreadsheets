@@ -42,4 +42,13 @@ defmodule GSS.SpreadsheetRangeTest do
       assert GSS.Spreadsheet.range(1, 10, 1, 10) == "A1:J10"
     end
   end
+
+  describe "range/4 span guard" do
+    test "raises GSS.InvalidRange when the row span exceeds max_rows_per_request" do
+      # default max_rows_per_request is 301; 400 - 1 = 399 >= 301
+      assert_raise GSS.InvalidRange, fn ->
+        GSS.Spreadsheet.range(1, 400, 1, 5)
+      end
+    end
+  end
 end

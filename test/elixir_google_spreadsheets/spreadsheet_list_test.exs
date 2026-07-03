@@ -1,6 +1,9 @@
 defmodule GSS.SpreadsheetListTest do
   use ExUnit.Case, async: true
 
+  # Hits the live Google Sheets API — excluded by default; run with `mix test --include integration`.
+  @moduletag :integration
+
   @test_spreadsheet_id Application.compile_env!(:elixir_google_spreadsheets, :spreadsheet_id)
   @test_list "list space"
   @test_row1 ["1", "2", "3", "4", "5"]

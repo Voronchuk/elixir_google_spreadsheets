@@ -25,11 +25,10 @@ defmodule GSS.Spreadsheet do
           col_to: integer()
         }
 
-  @api_url_spreadsheet "https://sheets.googleapis.com/v4/spreadsheets/"
-
   defp max_rows, do: GSS.config(:max_rows_per_request, 301)
   defp default_column_from, do: GSS.config(:default_column_from, 1)
   defp default_column_to, do: GSS.config(:default_column_to, 26)
+  defp api_url, do: GSS.config(:api_url, "https://sheets.googleapis.com/v4/spreadsheets/")
 
   @spec start_link({String.t(), Keyword.t()}) :: {:ok, pid}
   def start_link({spreadsheet_id, opts}) do
@@ -950,7 +949,7 @@ defmodule GSS.Spreadsheet do
   defp spreadsheet_query(type, url_suffix) when is_atom(type) do
     headers = %{"Authorization" => "Bearer #{GSS.Auth.token!()}"}
     params = get_request_params()
-    response = Client.request(type, @api_url_spreadsheet <> url_suffix, "", headers, params)
+    response = Client.request(type, api_url() <> url_suffix, "", headers, params)
     spreadsheet_query_response(response)
   end
 
@@ -964,11 +963,11 @@ defmodule GSS.Spreadsheet do
       case type do
         :post ->
           body = spreadsheet_query_body(data, options)
-          Client.request(:post, @api_url_spreadsheet <> url_suffix, body, headers, params)
+          Client.request(:post, api_url() <> url_suffix, body, headers, params)
 
         :put ->
           body = spreadsheet_query_body(data, options)
-          Client.request(:put, @api_url_spreadsheet <> url_suffix, body, headers, params)
+          Client.request(:put, api_url() <> url_suffix, body, headers, params)
       end
 
     spreadsheet_query_response(response)
@@ -979,7 +978,7 @@ defmodule GSS.Spreadsheet do
     headers = %{"Authorization" => "Bearer #{GSS.Auth.token!()}"}
     params = get_request_params()
     body = JSON.encode_to_iodata!(request)
-    response = Client.request(:post, @api_url_spreadsheet <> url_suffix, body, headers, params)
+    response = Client.request(:post, api_url() <> url_suffix, body, headers, params)
     spreadsheet_query_response(response)
   end
 
