@@ -7,6 +7,8 @@ This library is based on __Google Cloud API v4__ and uses __Google Service Accou
 Check [ecto_gss](https://github.com/Voronchuk/ecto_gss) if you need to integrate your Google Spreadsheet with Ecto changesets for validation and other features.
 
 # Setup
+> **Upgrading to v1.0:** the Elixir floor is raised to 1.18, `GSS.Spreadsheet.start_link` now takes a single `{id, opts}` tuple argument, and the `name:` option of `GSS.Spreadsheet.Supervisor.spreadsheet/2` is removed (processes are registered via the internal Registry).
+
 1. Use [this](https://console.developers.google.com/start/api?id=sheets.googleapis.com) wizard to create or select a project in the Google Developers Console and automatically turn on the API. Click __Continue__, then __Go to credentials__.
 2. On the __Add credentials to your project page__, create __Service account key__.
 3. Select your project name as service account and __JSON__ as key format, download the created key and rename it to __service_account.json__.
@@ -102,6 +104,14 @@ of retries is controlled by `max_retries` (default `3`; set to `0` to disable). 
 that a short custom `result_timeout` can make the caller's `GenStage.call/3` time out
 while a retry is still in flight; the default `result_timeout` of `:timer.minutes(10)`
 is sized to cover the worst case (`max_retries` exhausted with full backoff).
+
+Separately from that internal pipeline timeout, each `GSS.Spreadsheet` call is itself
+a `GenServer.call` and uses the standard **5 second** default timeout unless you pass a
+`timeout:` option in the call's options (e.g. `GSS.Spreadsheet.read_row(pid, 1, timeout:
+30_000)`). Retry backoff (up to roughly 10s at the default `max_retries: 3`, and longer
+when a `Retry-After` header is honoured) plus rate-limiter queueing can easily exceed
+that 5s default, so callers who want to survive a retry storm should pass a larger
+`timeout:`.
 
 ### Observability
 Finch emits its own [`:telemetry`](https://hexdocs.pm/telemetry) events for every HTTP
