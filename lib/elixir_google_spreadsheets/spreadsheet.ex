@@ -53,17 +53,18 @@ defmodule GSS.Spreadsheet do
         {:load_sheet_id, _opts},
         %{spreadsheet_id: spreadsheet_id, list_name: list_name} = state
       ) do
-    with {:json, %{"sheets" => sheets}} <- spreadsheet_query(:get, spreadsheet_id) do
-      Enum.filter(sheets, fn %{"properties" => %{"title" => title}} -> title == list_name end)
-      |> Enum.map(fn %{"properties" => %{"sheetId" => sheet_id}} -> sheet_id end)
-      |> case do
-        [sheet_id] ->
-          {:noreply, Map.put(state, :sheet_id, sheet_id)}
+    case spreadsheet_query(:get, spreadsheet_id) do
+      {:json, %{"sheets" => sheets}} ->
+        Enum.filter(sheets, fn %{"properties" => %{"title" => title}} -> title == list_name end)
+        |> Enum.map(fn %{"properties" => %{"sheetId" => sheet_id}} -> sheet_id end)
+        |> case do
+          [sheet_id] ->
+            {:noreply, Map.put(state, :sheet_id, sheet_id)}
 
-        _ ->
-          {:stop, "sheet list not found #{list_name}", state}
-      end
-    else
+          _ ->
+            {:stop, "sheet list not found #{list_name}", state}
+        end
+
       {:error, exception} ->
         Logger.error("[#{__MODULE__}] failed to load sheet id: #{inspect(exception)}")
         {:stop, "failed to load sheet id", state}
@@ -636,8 +637,8 @@ defmodule GSS.Spreadsheet do
         "&dateTimeRenderOption=#{datetime_render_option}&#{str_ranges}"
 
     case spreadsheet_query(:get, query) do
-      {:json, %{"valueRanges" => valueRanges}} ->
-        {:reply, {:ok, parse_value_ranges(valueRanges, options)}, state}
+      {:json, %{"valueRanges" => value_ranges}} ->
+        {:reply, {:ok, parse_value_ranges(value_ranges, options)}, state}
 
       {:json, _} ->
         {:reply, {:ok, []}, state}

@@ -1,7 +1,7 @@
 defmodule GSS.ClientTest do
   use ExUnit.Case, async: true
 
-  alias GSS.{Client.RequestParams, Client}
+  alias GSS.{Client, Client.RequestParams}
   alias GSS.StubModules.Consumer
 
   describe ".request" do

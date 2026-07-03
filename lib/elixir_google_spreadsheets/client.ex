@@ -8,6 +8,8 @@ defmodule GSS.Client do
   require Logger
 
   defmodule RequestParams do
+    @moduledoc false
+
     @type t :: %__MODULE__{
             method: atom(),
             url: binary(),

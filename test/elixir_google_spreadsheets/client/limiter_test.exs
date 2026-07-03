@@ -2,7 +2,7 @@ defmodule GSS.Client.LimiterTest do
   use ExUnit.Case, async: true
 
   alias GSS.Client.Limiter
-  alias GSS.StubModules.{Producer, Consumer}
+  alias GSS.StubModules.{Consumer, Producer}
 
   setup context do
     {:ok, client} = Producer.start_link([])

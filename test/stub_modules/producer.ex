@@ -1,4 +1,5 @@
 defmodule GSS.StubModules.Producer do
+  @moduledoc false
   use GenStage
 
   def start_link(events) do

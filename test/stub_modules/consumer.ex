@@ -1,4 +1,6 @@
 defmodule GSS.StubModules.Consumer do
+  @moduledoc false
+
   def start_link(producer) do
     GenStage.start_link(__MODULE__, {producer, self()})
   end
