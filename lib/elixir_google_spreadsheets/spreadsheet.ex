@@ -118,6 +118,40 @@ defmodule GSS.Spreadsheet do
     gen_server_call(pid, :rows, options)
   end
 
+  @doc """
+  Sort a worksheet.
+
+  The `:end_column_index` option is required; every other option has a default.
+  Returns `{:error, %GSS.InvalidInput{}}` (without touching the server) when
+  `row_count` is not an integer or `:end_column_index` is missing or not an integer.
+
+  ## Options
+
+  * `:sheet_id` - ID of the sheet to sort (default: the worksheet's `sheet_id`, or 0 when unbound)
+  * `:start_row_index` - First row to include in sort (default: 1, to skip header)
+  * `:end_row_index` - Last row (exclusive) to include (default: row_count + 1)
+  * `:start_column_index` - First column to include (default: 0)
+  * `:end_column_index` - Last column (exclusive) to include (required, no default)
+  * `:dimension_index` - Column to sort by (default: 0)
+  * `:sort_order` - "ASCENDING" or "DESCENDING" (default: "ASCENDING")
+  """
+  @spec sort(pid, integer(), Keyword.t()) :: :ok | {:error, Exception.t()}
+  def sort(pid, row_count, options \\ [])
+
+  def sort(pid, row_count, options) when is_integer(row_count) and is_list(options) do
+    case Keyword.get(options, :end_column_index) do
+      end_column_index when is_integer(end_column_index) ->
+        gen_server_call(pid, {:sort, row_count, options}, options)
+
+      _ ->
+        {:error,
+         %GSS.InvalidInput{message: "sort/3 requires an integer :end_column_index option"}}
+    end
+  end
+
+  def sort(_pid, _row_count, _options),
+    do: {:error, %GSS.InvalidInput{message: "sort/3 requires an integer row_count"}}
+
   @spec update_sheet_size(pid, integer(), integer(), Keyword.t()) ::
           {:ok, list()} | {:error, Exception.t()}
   def update_sheet_size(pid, row_count, col_count, options \\ []) do
@@ -467,6 +501,49 @@ defmodule GSS.Spreadsheet do
 
     request_body = %{requests: [request]}
     batch_update_query(spreadsheet_id, request_body, options, state)
+  end
+
+  # Sort the spreadsheet
+  def handle_call(
+        {:sort, row_count, options},
+        _from,
+        %{spreadsheet_id: spreadsheet_id, sheet_id: state_sheet_id} = state
+      ) do
+    url_suffix = "#{spreadsheet_id}:batchUpdate"
+
+    sheet_id = Keyword.get(options, :sheet_id, state_sheet_id || 0)
+    start_row_index = Keyword.get(options, :start_row_index, 1)
+    end_row_index = Keyword.get(options, :end_row_index, row_count + 1)
+    start_column_index = Keyword.get(options, :start_column_index, 0)
+    end_column_index = Keyword.fetch!(options, :end_column_index)
+    dimension_index = Keyword.get(options, :dimension_index, 0)
+    sort_order = Keyword.get(options, :sort_order, "ASCENDING")
+
+    request = %{
+      sortRange: %{
+        range: %{
+          sheetId: sheet_id,
+          startRowIndex: start_row_index,
+          endRowIndex: end_row_index,
+          startColumnIndex: start_column_index,
+          endColumnIndex: end_column_index
+        },
+        sortSpecs: [
+          %{
+            dimensionIndex: dimension_index,
+            sortOrder: sort_order
+          }
+        ]
+      }
+    }
+
+    case spreadsheet_query_post_batch(url_suffix, %{requests: [request]}, []) do
+      {:json, _response} ->
+        {:reply, :ok, state}
+
+      {:error, exception} ->
+        {:reply, {:error, exception}, state}
+    end
   end
 
   # Fetch the given range of cells from the spreadsheet

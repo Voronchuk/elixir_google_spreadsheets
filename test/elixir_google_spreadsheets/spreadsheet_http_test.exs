@@ -130,6 +130,139 @@ defmodule GSS.SpreadsheetHttpTest do
     end
   end
 
+  describe "sort/3" do
+    test "unqualified sort POSTs a SortRangeRequest with the documented defaults", %{
+      dispatcher: dispatcher,
+      pid: pid,
+      id: id
+    } do
+      test_pid = self()
+
+      stub(dispatcher, fn conn ->
+        send(
+          test_pid,
+          {:req, conn.method, conn.request_path, JSON.decode!(conn.private.raw_body)}
+        )
+
+        json_resp(conn, 200, %{"spreadsheetId" => id, "replies" => [%{}]})
+      end)
+
+      assert :ok = Spreadsheet.sort(pid, 10, end_column_index: 5)
+
+      assert_receive {:req, "POST", path, body}
+      assert path == "/v4/spreadsheets/#{id}:batchUpdate"
+      assert [request] = body["requests"]
+
+      assert request["sortRange"]["range"] == %{
+               "sheetId" => 0,
+               "startRowIndex" => 1,
+               "endRowIndex" => 11,
+               "startColumnIndex" => 0,
+               "endColumnIndex" => 5
+             }
+
+      assert request["sortRange"]["sortSpecs"] == [
+               %{"dimensionIndex" => 0, "sortOrder" => "ASCENDING"}
+             ]
+    end
+
+    test "explicit options override every default in the request body", %{
+      dispatcher: dispatcher,
+      pid: pid,
+      id: id
+    } do
+      test_pid = self()
+
+      stub(dispatcher, fn conn ->
+        send(test_pid, {:sort_body, JSON.decode!(conn.private.raw_body)})
+        json_resp(conn, 200, %{"spreadsheetId" => id, "replies" => [%{}]})
+      end)
+
+      assert :ok =
+               Spreadsheet.sort(pid, 10,
+                 sheet_id: 42,
+                 start_row_index: 3,
+                 end_row_index: 8,
+                 start_column_index: 2,
+                 end_column_index: 6,
+                 dimension_index: 4,
+                 sort_order: "DESCENDING"
+               )
+
+      assert_receive {:sort_body, body}
+      assert [request] = body["requests"]
+
+      assert request["sortRange"]["range"] == %{
+               "sheetId" => 42,
+               "startRowIndex" => 3,
+               "endRowIndex" => 8,
+               "startColumnIndex" => 2,
+               "endColumnIndex" => 6
+             }
+
+      assert request["sortRange"]["sortSpecs"] == [
+               %{"dimensionIndex" => 4, "sortOrder" => "DESCENDING"}
+             ]
+    end
+
+    test "an unqualified sort targets the worksheet's resolved sheet_id, not sheet 0", %{
+      dispatcher: dispatcher,
+      id: id
+    } do
+      test_pid = self()
+      list_id = id <> "-with-list-name"
+
+      stub(dispatcher, fn conn ->
+        case conn.method do
+          "GET" ->
+            json_resp(conn, 200, %{
+              "sheets" => [%{"properties" => %{"title" => "Data", "sheetId" => 987_654}}]
+            })
+
+          "POST" ->
+            send(test_pid, {:sort_body, JSON.decode!(conn.private.raw_body)})
+            json_resp(conn, 200, %{"spreadsheetId" => list_id, "replies" => [%{}]})
+        end
+      end)
+
+      {:ok, list_pid} = Spreadsheet.Supervisor.spreadsheet(list_id, list_name: "Data")
+
+      on_exit(fn ->
+        if Process.alive?(list_pid) do
+          DynamicSupervisor.terminate_child(Spreadsheet.Supervisor, list_pid)
+        end
+      end)
+
+      assert :ok = Spreadsheet.sort(list_pid, 10, end_column_index: 5)
+
+      assert_receive {:sort_body, body}
+      assert [request] = body["requests"]
+      assert request["sortRange"]["range"]["sheetId"] == 987_654
+    end
+
+    test "missing or invalid required args return {:error, %GSS.InvalidInput{}} without crashing",
+         %{
+           pid: pid
+         } do
+      assert {:error, %GSS.InvalidInput{}} = Spreadsheet.sort(pid, 10, sort_order: "DESCENDING")
+      assert {:error, %GSS.InvalidInput{}} = Spreadsheet.sort(pid, nil, end_column_index: 5)
+      assert Process.alive?(pid)
+    end
+
+    test "a non-200 status becomes {:error, %GSS.GoogleApiError{}}", %{
+      dispatcher: dispatcher,
+      pid: pid
+    } do
+      stub(dispatcher, fn conn ->
+        json_resp(conn, 403, %{
+          "error" => %{"code" => 403, "status" => "PERMISSION_DENIED", "message" => "forbidden"}
+        })
+      end)
+
+      assert {:error, %GSS.GoogleApiError{}} = Spreadsheet.sort(pid, 10, end_column_index: 5)
+    end
+  end
+
   describe "error handling" do
     test "a non-200 status becomes {:error, %GSS.GoogleApiError{}}", %{
       dispatcher: dispatcher,
